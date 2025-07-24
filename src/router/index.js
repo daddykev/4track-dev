@@ -14,7 +14,6 @@ import MusicCollection from '../views/MusicCollection.vue'
 import MedleyPage from '../views/MedleyPage.vue'
 import MedleySuccess from '../views/MedleySuccess.vue'
 import ArtistStudio from '../views/ArtistStudio.vue'
-import ArtistMedley from '../views/ArtistMedley.vue'
 import AdminUsers from '../views/AdminUsers.vue'
 import AdminArtists from '../views/AdminArtists.vue'
 import ArtistRoster from '../views/ArtistRoster.vue'
@@ -69,12 +68,6 @@ const router = createRouter({
       name: 'studio',
       component: ArtistStudio,
       meta: { title: 'Artist Studio - 4track', requiresAuth: true, requiresArtist: true }
-    },
-    {
-      path: '/artist/:artistId/medley',
-      name: 'artist-medley-edit',
-      component: ArtistMedley,
-      meta: { title: 'Manage Medley - 4track', requiresAuth: true, requiresArtist: true }
     },
     {
       path: '/roster',
