@@ -1,3 +1,4 @@
+// services/auth.js
 import { 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -6,6 +7,7 @@ import {
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile
 } from 'firebase/auth'
 import { 
@@ -91,6 +93,9 @@ class AuthService {
         await updateProfile(user, { displayName })
       }
       
+      // Send verification email
+      await sendEmailVerification(user)
+      
       // Determine user type based on invite code
       const userType = inviteCode === 'FIRSTWAVE' ? 'artist' : 'consumer'
       
@@ -115,6 +120,7 @@ class AuthService {
         },
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
+        emailVerified: false,
         // Store if they used the special invite code
         inviteCode: inviteCode === 'FIRSTWAVE' ? 'FIRSTWAVE' : null
       }
@@ -122,7 +128,7 @@ class AuthService {
       await setDoc(doc(db, 'users', user.uid), userData)
       
       this.userData = userData
-      return { user, userData }
+      return { user, userData, emailSent: true }
     } catch (error) {
       console.error('Sign up error:', error)
       throw this.handleAuthError(error)
@@ -135,9 +141,10 @@ class AuthService {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
       
-      // Update last login
+      // Update last login and email verification status
       await setDoc(doc(db, 'users', user.uid), {
-        lastLogin: serverTimestamp()
+        lastLogin: serverTimestamp(),
+        emailVerified: user.emailVerified
       }, { merge: true })
       
       await this.loadUserData(user.uid)
@@ -181,7 +188,8 @@ class AuthService {
             teamCollaboration: false
           },
           createdAt: serverTimestamp(),
-          lastLogin: serverTimestamp()
+          lastLogin: serverTimestamp(),
+          emailVerified: true // Google accounts are pre-verified
         }
         
         await setDoc(doc(db, 'users', user.uid), userData)
@@ -189,7 +197,8 @@ class AuthService {
       } else {
         // Update last login for existing user
         await setDoc(doc(db, 'users', user.uid), {
-          lastLogin: serverTimestamp()
+          lastLogin: serverTimestamp(),
+          emailVerified: true // Google accounts are verified
         }, { merge: true })
       }
       
@@ -223,9 +232,51 @@ class AuthService {
     }
   }
 
+  // Resend verification email
+  async resendVerificationEmail() {
+    if (!this.user) throw new Error('User not authenticated')
+    
+    try {
+      await sendEmailVerification(this.user)
+      return true
+    } catch (error) {
+      console.error('Error sending verification email:', error)
+      throw this.handleAuthError(error)
+    }
+  }
+
+  // Update email verification status in Firestore
+  async updateEmailVerificationStatus() {
+    if (!this.user) return false
+    
+    try {
+      await this.user.reload() // Refresh the user object
+      
+      if (this.user.emailVerified && this.userData && !this.userData.emailVerified) {
+        await setDoc(doc(db, 'users', this.user.uid), {
+          emailVerified: true
+        }, { merge: true })
+        
+        // Reload user data
+        await this.loadUserData(this.user.uid)
+        return true
+      }
+      
+      return this.user.emailVerified
+    } catch (error) {
+      console.error('Error updating verification status:', error)
+      return false
+    }
+  }
+
   // Update user type to artist
   async becomeArtist() {
     if (!this.user) throw new Error('User not authenticated')
+    
+    // Check if email is verified
+    if (!this.user.emailVerified) {
+      throw new Error('Please verify your email before becoming an artist')
+    }
     
     try {
       await setDoc(doc(db, 'users', this.user.uid), {
@@ -247,6 +298,11 @@ class AuthService {
   // Check if user is artist
   isArtist() {
     return this.userData?.userType === 'artist'
+  }
+
+  // Check if email is verified
+  isEmailVerified() {
+    return this.user?.emailVerified || false
   }
 
   // Get current user

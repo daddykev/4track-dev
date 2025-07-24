@@ -2,106 +2,149 @@
   <div class="auth-page">
     <div class="auth-container">
       <div class="auth-card">
-        <h1 class="auth-title">Create Your Account</h1>
-        <p class="auth-subtitle">Start building your music collection today</p>
-
-        <form @submit.prevent="handleSignup" class="auth-form">
-          <div class="form-group">
-            <label for="name" class="form-label">Display Name</label>
-            <input
-              id="name"
-              v-model="displayName"
-              type="text"
-              class="form-input"
-              placeholder="Your name"
-              required
-            />
+        <!-- Show verification message if email was sent -->
+        <div v-if="verificationSent" class="verification-message">
+          <div class="verification-icon">
+            <font-awesome-icon :icon="['fas', 'envelope-circle-check']" />
           </div>
-
-          <div class="form-group">
-            <label for="email" class="form-label">Email</label>
-            <input
-              id="email"
-              v-model="email"
-              type="email"
-              class="form-input"
-              placeholder="you@example.com"
-              required
-            />
+          <h1 class="auth-title">Check Your Email</h1>
+          <p class="auth-subtitle mb-lg">
+            We've sent a verification email to <strong>{{ email }}</strong>
+          </p>
+          <div class="verification-info">
+            <p>Please click the link in the email to verify your account.</p>
+            <p class="text-muted">Can't find the email? Check your spam folder.</p>
           </div>
-
-          <div class="form-group">
-            <label for="password" class="form-label">Password</label>
-            <input
-              id="password"
-              v-model="password"
-              type="password"
-              class="form-input"
-              placeholder="••••••••"
-              minlength="6"
-              required
-            />
-            <p class="form-hint">At least 6 characters</p>
+          
+          <div class="verification-actions">
+            <button 
+              @click="resendVerification" 
+              class="btn btn-outline"
+              :disabled="resendLoading || resendCooldown > 0"
+            >
+              <font-awesome-icon 
+                v-if="resendLoading" 
+                :icon="['fas', 'spinner']" 
+                class="fa-spin mr-sm" 
+              />
+              {{ resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Email' }}
+            </button>
+            
+            <router-link to="/login" class="btn btn-primary">
+              Continue to Login
+            </router-link>
           </div>
-
-          <div class="form-group">
-            <label for="inviteCode" class="form-label">
-              Invite Code 
-              <span class="text-muted font-sm">(optional)</span>
-            </label>
-            <input
-              id="inviteCode"
-              v-model="inviteCode"
-              type="text"
-              class="form-input"
-              placeholder="Enter invite code"
-            />
-            <p v-if="inviteCode === 'FIRSTWAVE'" class="form-hint text-success">
-              <font-awesome-icon :icon="['fas', 'check-circle']" class="mr-xs" />
-              Artist account will be created
-            </p>
-          </div>
-
-          <label class="checkbox-label">
-            <input v-model="agreeToTerms" type="checkbox" required />
-            <span>
-              I agree to the 
-              <a href="/terms" target="_blank" class="auth-link">Terms of Service</a>
-              and 
-              <a href="/privacy" target="_blank" class="auth-link">Privacy Policy</a>
-            </span>
-          </label>
-
-          <div v-if="error" class="error-message">
-            {{ error }}
-          </div>
-
-          <button type="submit" class="btn btn-primary btn-lg w-full" :disabled="loading || !agreeToTerms">
-            <font-awesome-icon v-if="loading" :icon="['fas', 'spinner']" class="fa-spin mr-sm" />
-            {{ loading ? 'Creating account...' : 'Create Free Account' }}
-          </button>
-        </form>
-
-        <div class="divider">
-          <span>OR</span>
+          
+          <p class="auth-footer">
+            Wrong email? 
+            <a @click="resetForm" href="#" class="auth-link">Sign up again</a>
+          </p>
         </div>
 
-        <button @click="handleGoogleSignup" class="btn btn-google w-full">
-          <font-awesome-icon :icon="['fab', 'google']" class="mr-sm" />
-          Continue with Google
-        </button>
+        <!-- Regular signup form -->
+        <div v-else>
+          <h1 class="auth-title">Create Your Account</h1>
+          <p class="auth-subtitle">Start building your music collection today</p>
 
-        <p class="auth-footer">
-          Already have an account?
-          <router-link to="/login" class="auth-link">Sign in</router-link>
-        </p>
+          <!-- Show invite code field for artists -->
+          <div v-if="showInviteCode" class="invite-banner">
+            <font-awesome-icon :icon="['fas', 'ticket']" class="invite-icon" />
+            <p>Have an artist invite code? Enter it below to unlock artist features!</p>
+          </div>
+
+          <form @submit.prevent="handleSignup" class="auth-form">
+            <div v-if="showInviteCode" class="form-group">
+              <label for="inviteCode" class="form-label">Invite Code (Optional)</label>
+              <input
+                id="inviteCode"
+                v-model="inviteCode"
+                type="text"
+                class="form-input"
+                placeholder="Enter invite code"
+                autocomplete="off"
+              />
+              <p class="form-hint">For early access to artist features</p>
+            </div>
+
+            <div class="form-group">
+              <label for="name" class="form-label">Display Name</label>
+              <input
+                id="name"
+                v-model="displayName"
+                type="text"
+                class="form-input"
+                placeholder="Your name"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="email" class="form-label">Email</label>
+              <input
+                id="email"
+                v-model="email"
+                type="email"
+                class="form-input"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="password" class="form-label">Password</label>
+              <input
+                id="password"
+                v-model="password"
+                type="password"
+                class="form-input"
+                placeholder="••••••••"
+                minlength="6"
+                required
+              />
+              <p class="form-hint">At least 6 characters</p>
+            </div>
+
+            <label class="checkbox-label">
+              <input v-model="agreeToTerms" type="checkbox" required />
+              <span>
+                I agree to the 
+                <a href="/terms" target="_blank" class="auth-link">Terms of Service</a>
+                and 
+                <a href="/privacy" target="_blank" class="auth-link">Privacy Policy</a>
+              </span>
+            </label>
+
+            <div v-if="error" class="error-message">
+              {{ error }}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-full" :disabled="loading || !agreeToTerms">
+              <font-awesome-icon v-if="loading" :icon="['fas', 'spinner']" class="fa-spin mr-sm" />
+              {{ loading ? 'Creating account...' : 'Create Free Account' }}
+            </button>
+          </form>
+
+          <div class="divider">
+            <span>OR</span>
+          </div>
+
+          <button @click="handleGoogleSignup" class="btn btn-google w-full">
+            <font-awesome-icon :icon="['fab', 'google']" class="mr-sm" />
+            Continue with Google
+          </button>
+
+          <p class="auth-footer">
+            Already have an account?
+            <router-link to="/login" class="auth-link">Sign in</router-link>
+          </p>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService } from '@/services/auth'
 
@@ -111,17 +154,32 @@ const displayName = ref('')
 const email = ref('')
 const password = ref('')
 const inviteCode = ref('')
+const showInviteCode = ref(true)
 const agreeToTerms = ref(false)
 const error = ref('')
 const loading = ref(false)
+const verificationSent = ref(false)
+const resendLoading = ref(false)
+const resendCooldown = ref(0)
+
+let cooldownInterval = null
 
 const handleSignup = async () => {
   loading.value = true
   error.value = ''
   
   try {
-    await authService.signUp(email.value, password.value, displayName.value, inviteCode.value)
-    router.push('/collection')
+    const result = await authService.signUp(
+      email.value, 
+      password.value, 
+      displayName.value,
+      inviteCode.value.toUpperCase()
+    )
+    
+    if (result.emailSent) {
+      verificationSent.value = true
+      startResendCooldown()
+    }
   } catch (err) {
     error.value = err.message || 'Failed to create account'
   } finally {
@@ -142,10 +200,52 @@ const handleGoogleSignup = async () => {
     loading.value = false
   }
 }
+
+const resendVerification = async () => {
+  resendLoading.value = true
+  error.value = ''
+  
+  try {
+    await authService.resendVerificationEmail()
+    startResendCooldown()
+  } catch (err) {
+    error.value = err.message || 'Failed to resend verification email'
+  } finally {
+    resendLoading.value = false
+  }
+}
+
+const startResendCooldown = () => {
+  resendCooldown.value = 60 // 60 seconds cooldown
+  
+  if (cooldownInterval) clearInterval(cooldownInterval)
+  
+  cooldownInterval = setInterval(() => {
+    resendCooldown.value--
+    if (resendCooldown.value <= 0) {
+      clearInterval(cooldownInterval)
+    }
+  }, 1000)
+}
+
+const resetForm = () => {
+  verificationSent.value = false
+  email.value = ''
+  password.value = ''
+  displayName.value = ''
+  inviteCode.value = ''
+  error.value = ''
+}
+
+onMounted(() => {
+  return () => {
+    if (cooldownInterval) clearInterval(cooldownInterval)
+  }
+})
 </script>
 
 <style scoped>
-/* Same styles as before */
+/* Same styles as before, plus new verification styles */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -186,14 +286,58 @@ const handleGoogleSignup = async () => {
   gap: var(--spacing-lg);
 }
 
+/* Invite code banner */
+.invite-banner {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
+  color: var(--text-inverse);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  text-align: center;
+  margin-bottom: var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-sm);
+}
+
+.invite-icon {
+  font-size: var(--font-lg);
+  flex-shrink: 0;
+}
+
+/* Verification message styles */
+.verification-message {
+  text-align: center;
+}
+
+.verification-icon {
+  font-size: 4rem;
+  color: var(--color-success);
+  margin-bottom: var(--spacing-lg);
+}
+
+.verification-info {
+  background: var(--bg-secondary);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+.verification-info p {
+  margin: var(--spacing-sm) 0;
+}
+
+.verification-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  margin-bottom: var(--spacing-xl);
+}
+
 .form-hint {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin-top: var(--spacing-xs);
-}
-
-.form-hint.text-success {
-  color: var(--color-success);
 }
 
 .checkbox-label {
@@ -262,12 +406,16 @@ const handleGoogleSignup = async () => {
   width: 100%;
 }
 
-.mr-xs {
-  margin-right: var(--spacing-xs);
+.mr-sm {
+  margin-right: var(--spacing-sm);
 }
 
-.text-success {
-  color: var(--color-success);
+.mb-lg {
+  margin-bottom: var(--spacing-lg);
+}
+
+.text-muted {
+  color: var(--text-muted);
 }
 
 .error-message {

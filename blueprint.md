@@ -24,7 +24,7 @@
 
 ### Backend
 - **Database**: Firebase Firestore
-- **Authentication**: Firebase Auth (Email/Password, Google)
+- **Authentication**: Firebase Auth (Email/Password with verification, Google)
 - **Storage**: Firebase Cloud Storage
 - **Functions**: Firebase Cloud Functions
 - **Hosting**: Firebase Hosting
@@ -40,25 +40,26 @@
 ```
 fourtrack-os/
 ├── src/
-│   ├── assets/                   # CSS and static assets
-│   │   ├── base.css             # Base resets and typography
-│   │   ├── main.css             # Global styles
-│   │   ├── themes.css           # CSS custom properties
-│   │   └── components.css       # Reusable utility classes
+│   ├── assets/                 # CSS and static assets
+│   │   ├── base.css            # Base resets and typography
+│   │   ├── main.css            # Global styles
+│   │   ├── themes.css          # CSS custom properties
+│   │   └── components.css      # Reusable utility classes
 │   │
-│   ├── components/              # Reusable Vue components
+│   ├── components/             # Reusable Vue components
 │   │   ├── FourTrackNav.vue    # Main navigation
 │   │   ├── SessionMeters.vue   # Audio level meters
-│   │   └── SessionSpectroscope.vue # Frequency analyzer
+│   │   ├── SessionSpectroscope.vue # Frequency analyzer
+│   │   └── EmailVerificationBanner.vue # Email verification reminder
 │   │
-│   ├── composables/             # Vue composables
+│   ├── composables/            # Vue composables
 │   │   └── useTheme.js         # Theme management
 │   │
-│   ├── router/                  # Routing configuration
+│   ├── router/                 # Routing configuration
 │   │   └── index.js            # Route definitions
 │   │
 │   ├── services/               # API and business logic
-│   │   ├── auth.js             # Authentication service
+│   │   ├── auth.js             # Authentication service with email verification
 │   │   └── api.js              # API service wrapper
 │   │
 │   ├── utils/                  # Utility functions
@@ -68,9 +69,9 @@ fourtrack-os/
 │   ├── views/                  # Page components
 │   │   ├── HomePage.vue        # Landing page
 │   │   ├── LoginPage.vue       # User login
-│   │   ├── SignupPage.vue      # User registration
+│   │   ├── SignupPage.vue      # User registration with email verification
 │   │   ├── DiscoverPage.vue    # Music discovery
-│   │   ├── CreateArtist.vue    # Artist onboarding
+│   │   ├── CreateArtist.vue    # Artist onboarding (requires verified email)
 │   │   ├── ArtistMedley.vue    # Medley management
 │   │   ├── UserProfile.vue     # User settings
 │   │   ├── MusicCollection.vue # User's music library
@@ -82,30 +83,30 @@ fourtrack-os/
 │   └── firebase.js             # Firebase configuration
 │
 ├── functions/                  # Cloud Functions
-│   ├── index.js               # Function exports
-│   ├── authFunctions.js       # User authentication
-│   ├── medleyFunctions.js     # PayPal & medley logic
-│   └── analyticsFunctions.js  # Privacy-focused analytics
+│   ├── index.js                # Function exports
+│   ├── authFunctions.js        # User authentication
+│   ├── medleyFunctions.js      # PayPal & medley logic
+│   └── analyticsFunctions.js   # Privacy-focused analytics
 │
-├── public/                    # Static assets
+├── public/                     # Static assets
 │   ├── favicon.ico
 │   └── index.html
 │
-├── .env.example              # Environment template
+├── .env.example                # Environment template
 ├── .gitignore
-├── firebase.json             # Firebase configuration
-├── firestore.rules           # Security rules
-├── storage.rules             # Storage rules
+├── firebase.json               # Firebase configuration
+├── firestore.rules             # Security rules
+├── storage.rules               # Storage rules
 ├── package.json
-├── README.md                 # Project documentation
-├── LICENSE                   # MIT License
+├── README.md                   # Project documentation
+├── LICENSE                     # MIT License
 └── vite.config.js
 ```
 
 ## Core Features
 
 ### For Artists
-1. **Artist Profile** - Basic profile with name, genre, bio, PayPal email
+1. **Artist Profile** - Basic profile with name, genre, bio, PayPal email (requires verified email)
 2. **Medley Manager** - Upload up to 4 tracks with custom artwork
 3. **Direct Payments** - 100% of sales go directly to artist's PayPal
 4. **Flexible Pricing** - Set prices from $0-10 per track
@@ -119,6 +120,13 @@ fourtrack-os/
 3. **Direct Support** - Pay artists directly via PayPal
 4. **Download Library** - Access purchased tracks anytime
 5. **Heart Tracks** - Save favorites for later purchase
+
+### Authentication & Security
+1. **Email Verification** - Required for all email/password signups
+2. **Google Sign-In** - Pre-verified authentication option
+3. **Invite Codes** - Special access for early artists (FIRSTWAVE)
+4. **Secure Sessions** - JWT-based authentication
+5. **Privacy First** - Minimal data collection
 
 ### Privacy & Security
 1. **No Cookies** - Zero tracking cookies
@@ -227,6 +235,40 @@ fourtrack-os/
   timestamp: timestamp
 }
 ```
+
+## Authentication Flow
+
+### Email/Password Signup
+1. User enters display name, email, and password
+2. Optional: Enter invite code (FIRSTWAVE for artist access)
+3. Account created with `emailVerified: false`
+4. Verification email sent automatically
+5. User sees confirmation page with resend option
+6. User clicks verification link in email
+7. Email verified status updated in Firebase Auth and Firestore
+8. Full access granted to platform features
+
+### Google Sign-In
+1. User clicks "Continue with Google"
+2. Google OAuth popup appears
+3. Account created/signed in with `emailVerified: true`
+4. Immediate access to all features
+
+### Email Verification Requirements
+- **Creating Artist Profile**: Requires verified email
+- **Uploading Tracks**: Requires verified email
+- **Purchasing Tracks**: No verification required
+- **Saving Tracks**: No verification required
+
+## Components
+
+### EmailVerificationBanner
+Reusable component that displays when user's email is not verified:
+- Shows warning message with icon
+- Resend verification email button
+- 60-second cooldown between resends
+- Auto-hides when email is verified
+- Responsive design for mobile
 
 ## Security Rules
 
