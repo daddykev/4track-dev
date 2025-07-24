@@ -1,3 +1,637 @@
+<script setup>
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { db, auth } from '@/firebase'
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
+import { apiService } from '@/services/api'
+import SessionMeters from '@/components/SessionMeters.vue'
+import SessionSpectroscope from '@/components/SessionSpectroscope.vue'
+
+const route = useRoute()
+const router = useRouter()
+
+// State
+const medley = ref(null)
+const artist = ref(null)
+const loading = ref(true)
+const error = ref(null)
+const currentTrack = ref(null)
+const currentTrackIndex = ref(0)
+const isPlaying = ref(false)
+const audioContext = ref(null)
+const audioElement = ref(null)
+const mediaElementSource = ref(null)
+const currentTime = ref(0)
+const duration = ref(0)
+const currentUser = ref(null)
+const heartedTracks = ref(new Set())
+const heartingTrack = ref(null)
+const showCopyModal = ref(false)
+const downloadUrls = ref({})
+const purchasingTrack = ref(null)
+const purchaseError = ref(null)
+
+// Add sessionId for analytics
+const sessionId = ref(null)
+
+// Add analyser node refs
+const leftMetersAnalyser = ref(null)
+const rightMetersAnalyser = ref(null)
+const spectroscopeAnalyser = ref(null)
+
+// Default fallback image - using a data URL for a simple placeholder
+const DEFAULT_COVER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"%3E%3Crect width="400" height="400" fill="%23333"%2F%3E%3Cpath d="M200 140c-33.137 0-60 26.863-60 60s26.863 60 60 60 60-26.863 60-60-26.863-60-60-60zm0 100c-22.091 0-40-17.909-40-40s17.909-40 40-40 40 17.909 40 40-17.909 40-40 40z" fill="%23666"%2F%3E%3Cpath d="M200 180c-11.046 0-20 8.954-20 20s8.954 20 20 20 20-8.954 20-20-8.954-20-20-20z" fill="%23999"%2F%3E%3C/svg%3E'
+
+// Generate session ID
+const generateSessionId = () => {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
+
+// Auth listener
+onAuthStateChanged(auth, (user) => {
+  currentUser.value = user
+  if (user && medley.value) {
+    loadHeartedTracks()
+  }
+})
+
+// Computed
+const coverImage = computed(() => {
+  // Try to get cover image from various sources
+  const url = medley.value?.coverUrl || 
+              artist.value?.profileImageUrl || 
+              artist.value?.coverImageUrl ||
+              artist.value?.imageUrl ||
+              DEFAULT_COVER
+  return url
+})
+
+const progress = computed(() => {
+  if (!duration.value) return 0
+  return (currentTime.value / duration.value) * 100
+})
+
+const formattedCurrentTime = computed(() => {
+  return formatTime(currentTime.value)
+})
+
+const formattedDuration = computed(() => {
+  return formatTime(duration.value)
+})
+
+const artistThumbnail = computed(() => {
+  // Check for primary photo thumbnail first (from ArtistPhotos feature)
+  if (artist.value?.primaryPhotoThumbnail) {
+    return artist.value.primaryPhotoThumbnail
+  }
+  // Fall back to other image sources
+  return artist.value?.profileImageUrl || 
+         artist.value?.coverImageUrl ||
+         artist.value?.imageUrl ||
+         null
+})
+
+// Add image error handler
+const handleImageError = (location, event) => {
+  console.error(`Image failed to load at ${location}:`, event.target.src)
+  // Set the fallback image
+  event.target.src = DEFAULT_COVER
+}
+
+// Initialize analyser nodes
+const initializeAnalysers = () => {
+  if (!audioContext.value) return
+
+  // Initialize meters analysers
+  leftMetersAnalyser.value = audioContext.value.createAnalyser()
+  leftMetersAnalyser.value.fftSize = 1024
+  leftMetersAnalyser.value.smoothingTimeConstant = 0.5
+  leftMetersAnalyser.value.minDecibels = -45
+  leftMetersAnalyser.value.maxDecibels = 6
+
+  rightMetersAnalyser.value = audioContext.value.createAnalyser()
+  rightMetersAnalyser.value.fftSize = 1024
+  rightMetersAnalyser.value.smoothingTimeConstant = 0.5
+  rightMetersAnalyser.value.minDecibels = -45
+  rightMetersAnalyser.value.maxDecibels = 6
+
+  // Initialize spectroscope analyser
+  spectroscopeAnalyser.value = audioContext.value.createAnalyser()
+  spectroscopeAnalyser.value.fftSize = 16384
+  spectroscopeAnalyser.value.minDecibels = -90
+  spectroscopeAnalyser.value.maxDecibels = 0
+  spectroscopeAnalyser.value.smoothingTimeConstant = 0.85
+  spectroscopeAnalyser.value.channelCount = 2
+  spectroscopeAnalyser.value.channelCountMode = 'explicit'
+  spectroscopeAnalyser.value.channelInterpretation = 'discrete'
+}
+
+// Analytics helper function - simplified for medley pages
+const trackAnalyticsEvent = async (eventType, eventMetadata = {}) => {
+  if (!artist.value || !sessionId.value) return
+  
+  try {
+    const analyticsData = {
+      sessionId: sessionId.value,
+      pageType: 'medley', // Use medley as page type
+      artistId: artist.value.id,
+      artistSlug: artist.value.customSlug,
+      eventType: eventType,
+      events: [{
+        type: eventType,
+        timestamp: Date.now(),
+        metadata: eventMetadata
+      }],
+      referrer: document.referrer || null,
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      country: navigator.language.split('-')[1] || 'US'
+    }
+    
+    // For now, just log the analytics locally
+    // We'll fix the backend to handle medley page type
+    console.log('Analytics event:', eventType, analyticsData)
+    
+    // Comment out the actual API call for now to avoid errors
+    /*
+    const response = await fetch('https://us-central1-fourtrack-os.cloudfunctions.net/collectAnalytics', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(analyticsData),
+      mode: 'cors'
+    })
+    
+    if (!response.ok) {
+      console.warn('Analytics response not OK:', response.status)
+    }
+    */
+  } catch (err) {
+    console.warn('Analytics error:', err)
+  }
+}
+
+// Methods
+const loadMedley = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    // Generate session ID if not already set
+    if (!sessionId.value) {
+      sessionId.value = generateSessionId()
+    }
+    
+    let artistSlug = ''
+    
+    // Get the artist slug from route params
+    artistSlug = route.params.artistSlug
+    
+    if (!artistSlug) {
+      error.value = 'Invalid artist URL'
+      return
+    }
+    
+    // Find artist by slug
+    const artistQuery = query(
+      collection(db, 'artistProfiles'),
+      where('customSlug', '==', artistSlug)
+    )
+    
+    const artistSnapshot = await getDocs(artistQuery)
+    
+    if (artistSnapshot.empty) {
+      error.value = 'Artist not found'
+      return
+    }
+    
+    artist.value = {
+      id: artistSnapshot.docs[0].id,
+      ...artistSnapshot.docs[0].data()
+    }
+    
+    // Create a medley object from artist data
+    medley.value = {
+      id: artist.value.id,
+      name: `${artist.value.name}'s Medley`,
+      artistId: artist.value.id,
+      coverUrl: artist.value.profileImageUrl || artist.value.coverImageUrl || artist.value.imageUrl,
+      description: artist.value.bio || '',
+      tracks: []
+    }
+    
+    // Load medley tracks
+    const tracksQuery = query(
+      collection(db, 'medleyTracks'),
+      where('artistId', '==', artist.value.id),
+      orderBy('order', 'asc')
+    )
+    
+    const tracksSnapshot = await getDocs(tracksQuery)
+    medley.value.tracks = tracksSnapshot.docs.map(doc => {
+      const trackData = {
+        id: doc.id,
+        ...doc.data()
+      }
+      return trackData
+    })
+    
+    // Update page title
+    document.title = `${artist.value.name} - Medley | 4track`
+    
+    // Track page view
+    trackAnalyticsEvent('page_view', {
+      pageTitle: document.title
+    })
+    
+    // Load hearted tracks if user is logged in
+    if (currentUser.value) {
+      await loadHeartedTracks()
+      await loadPurchasedTracks()
+    }
+    
+    // Auto-play first track if available
+    if (medley.value.tracks?.length > 0) {
+      selectTrack(medley.value.tracks[0], 0)
+    }
+  } catch (err) {
+    console.error('Error loading medley:', err)
+    error.value = 'Failed to load medley'
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadHeartedTracks = async () => {
+  if (!currentUser.value || !medley.value?.tracks) return
+  
+  try {
+    // Load from userCollections
+    const collectionQuery = query(
+      collection(db, 'userCollections'),
+      where('userEmail', '==', currentUser.value.email),
+      where('artistId', '==', artist.value.id)
+    )
+    
+    const collectionSnapshot = await getDocs(collectionQuery)
+    const hearted = new Set()
+    
+    collectionSnapshot.forEach(doc => {
+      const data = doc.data()
+      if (data.trackId) {
+        hearted.add(data.trackId)
+      }
+    })
+    
+    heartedTracks.value = hearted
+  } catch (err) {
+    console.error('Error loading hearted tracks:', err)
+  }
+}
+
+const selectTrack = (track, index) => {
+  if (currentTrack.value?.id === track.id && isPlaying.value) {
+    togglePlay()
+  } else {
+    currentTrack.value = track
+    currentTrackIndex.value = index
+    loadTrack(track)
+  }
+}
+
+const loadTrack = async (track) => {
+  if (!track.audioUrl) {
+    console.error('No audio URL for track:', track)
+    return
+  }
+  
+  try {
+    // Stop current playback if any
+    stopPlayback()
+    
+    // Create or reuse HTML5 audio element
+    if (!audioElement.value) {
+      audioElement.value = new Audio()
+      audioElement.value.crossOrigin = 'anonymous' // Required for CORS
+      
+      // Set up event listeners once
+      audioElement.value.addEventListener('loadedmetadata', () => {
+        duration.value = audioElement.value.duration
+      })
+      
+      audioElement.value.addEventListener('timeupdate', () => {
+        currentTime.value = audioElement.value.currentTime
+      })
+      
+      audioElement.value.addEventListener('ended', async () => {
+        if (isPlaying.value) {
+          isPlaying.value = false
+          await nextTrack()
+        }
+      })
+      
+      audioElement.value.addEventListener('error', (e) => {
+        console.error('Audio loading error:', e)
+        error.value = 'Failed to load audio'
+      })
+    }
+    
+    // Set the new source
+    audioElement.value.src = track.audioUrl
+    audioElement.value.load() // Force reload
+    
+    // Initialize Web Audio API context if needed
+    if (!audioContext.value) {
+      audioContext.value = new (window.AudioContext || window.webkitAudioContext)()
+      initializeAnalysers()
+    }
+    
+    // Create MediaElementSource from HTML5 audio (only once per audio element)
+    if (!mediaElementSource.value && audioElement.value) {
+      mediaElementSource.value = audioContext.value.createMediaElementSource(audioElement.value)
+      
+      // Create a channel splitter for stereo analysis
+      const splitter = audioContext.value.createChannelSplitter(2)
+      
+      // Connect source to splitter
+      mediaElementSource.value.connect(splitter)
+      
+      // Connect left channel to left meters analyser
+      splitter.connect(leftMetersAnalyser.value, 0)
+      
+      // Connect right channel to right meters analyser
+      splitter.connect(rightMetersAnalyser.value, 1)
+      
+      // Connect source directly to spectroscope (for stereo analysis)
+      mediaElementSource.value.connect(spectroscopeAnalyser.value)
+      
+      // Connect to destination for audio output
+      mediaElementSource.value.connect(audioContext.value.destination)
+    }
+    
+    // Reset time values
+    currentTime.value = 0
+    
+  } catch (err) {
+    console.error('Error loading track:', err)
+    error.value = 'Failed to load track'
+  }
+}
+
+const startPlayback = async () => {
+  if (!audioElement.value || !currentTrack.value) return
+  
+  try {
+    // Resume audio context if suspended (required for some browsers)
+    if (audioContext.value && audioContext.value.state === 'suspended') {
+      await audioContext.value.resume()
+    }
+    
+    await audioElement.value.play()
+    isPlaying.value = true
+    
+    // Track play event
+    trackAnalyticsEvent('play', {
+      trackId: currentTrack.value.id,
+      trackTitle: currentTrack.value.title
+    })
+  } catch (error) {
+    console.error('Playback error:', error)
+    isPlaying.value = false
+    if (error.name === 'NotAllowedError') {
+      error.value = 'Please click play to start audio'
+    }
+  }
+}
+
+const stopPlayback = () => {
+  if (audioElement.value) {
+    audioElement.value.pause()
+    audioElement.value.currentTime = 0
+  }
+  isPlaying.value = false
+}
+
+const togglePlay = () => {
+  if (isPlaying.value) {
+    pausePlayback()
+  } else {
+    startPlayback()
+  }
+}
+
+const pausePlayback = () => {
+  if (audioElement.value) {
+    audioElement.value.pause()
+  }
+  isPlaying.value = false
+  
+  // Track pause event
+  if (currentTrack.value) {
+    trackAnalyticsEvent('pause', {
+      trackId: currentTrack.value.id,
+      currentTime: currentTime.value
+    })
+  }
+}
+
+const seekToPosition = (event) => {
+  if (!audioElement.value || !duration.value) return
+  
+  const rect = event.currentTarget.getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const percentage = Math.max(0, Math.min(1, x / rect.width))
+  audioElement.value.currentTime = percentage * duration.value
+}
+
+const previousTrack = async () => {
+  if (currentTrackIndex.value > 0) {
+    const prevIndex = currentTrackIndex.value - 1
+    await selectTrack(medley.value.tracks[prevIndex], prevIndex)
+    if (isPlaying.value) {
+      await startPlayback()
+    }
+  }
+}
+
+const nextTrack = async () => {
+  if (currentTrackIndex.value < medley.value.tracks.length - 1) {
+    const nextIndex = currentTrackIndex.value + 1
+    await selectTrack(medley.value.tracks[nextIndex], nextIndex)
+    // Auto-play next track
+    await startPlayback()
+  } else {
+    // End of playlist
+    stopPlayback()
+  }
+}
+
+const toggleHeart = async (track) => {
+  if (!currentUser.value) {
+    router.push('/login')
+    return
+  }
+  
+  heartingTrack.value = track.id
+  
+  try {
+    // Check if already in collection
+    const collectionQuery = query(
+      collection(db, 'userCollections'),
+      where('userEmail', '==', currentUser.value.email),
+      where('trackId', '==', track.id)
+    )
+    
+    const collectionSnapshot = await getDocs(collectionQuery)
+    
+    if (!collectionSnapshot.empty) {
+      // Remove from collection
+      for (const doc of collectionSnapshot.docs) {
+        await apiService.removeFromCollection(doc.id)
+      }
+      heartedTracks.value.delete(track.id)
+    } else {
+      // Add to collection
+      await addDoc(collection(db, 'userCollections'), {
+        userId: currentUser.value.uid,
+        userEmail: currentUser.value.email,
+        trackId: track.id,
+        artistId: artist.value.id,
+        timestamp: serverTimestamp(),
+        type: 'hearted',
+        isPurchased: false
+      })
+      heartedTracks.value.add(track.id)
+    }
+  } catch (err) {
+    console.error('Error toggling heart:', err)
+  } finally {
+    heartingTrack.value = null
+  }
+}
+
+const purchaseTrack = async (track) => {
+  if (!currentUser.value) {
+    router.push(`/login?return=${encodeURIComponent(window.location.pathname)}`)
+    return
+  }
+  
+  purchasingTrack.value = track.id
+  purchaseError.value = null
+  
+  try {
+    const result = await apiService.createMedleyPayPalOrder(
+      medley.value.id,
+      track.id
+    )
+    
+    if (result.approveUrl) {
+      window.location.href = result.approveUrl
+    }
+  } catch (err) {
+    console.error('Purchase error:', err)
+    purchaseError.value = err.message || 'Failed to create checkout session'
+    purchasingTrack.value = null
+  }
+}
+
+const downloadFreeTrack = async (track) => {
+  if (!currentUser.value) {
+    router.push(`/login?return=${encodeURIComponent(window.location.pathname)}`)
+    return
+  }
+  
+  purchasingTrack.value = track.id
+  purchaseError.value = null
+  
+  try {
+    const result = await apiService.processFreeDownload(
+      medley.value.id,
+      track.id
+    )
+    
+    if (result.downloadUrl) {
+      downloadUrls.value[track.id] = result.downloadUrl
+      window.open(result.downloadUrl, '_blank')
+    }
+  } catch (err) {
+    console.error('Download error:', err)
+    purchaseError.value = err.message || 'Failed to process download'
+  } finally {
+    purchasingTrack.value = null
+  }
+}
+
+// Helper functions
+const formatTime = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '0:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+const formatDuration = (seconds) => {
+  if (!seconds) return '0:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+// Load purchased tracks on mount
+const loadPurchasedTracks = async () => {
+  // Add guards to ensure both values exist
+  if (!currentUser.value || !medley.value || !medley.value.id) return
+  
+  try {
+    // Check purchases collection for this user's purchases
+    const purchasesQuery = query(
+      collection(db, 'medleyRoyalties'),
+      where('payerEmail', '==', currentUser.value.email),
+      where('artistId', '==', medley.value.id),
+      where('type', 'in', ['purchase', 'free_download'])
+    )
+    
+    const purchasesSnapshot = await getDocs(purchasesQuery)
+    purchasesSnapshot.forEach(doc => {
+      const purchase = doc.data()
+      if (purchase.trackId && purchase.downloadUrl) {
+        downloadUrls.value[purchase.trackId] = purchase.downloadUrl
+      }
+    })
+  } catch (err) {
+    console.error('Error loading purchased tracks:', err)
+  }
+}
+
+// Lifecycle
+onMounted(() => {
+  loadMedley()
+})
+
+onUnmounted(() => {
+  // Clean up audio element
+  if (audioElement.value) {
+    audioElement.value.pause()
+    audioElement.value.src = ''
+  }
+  
+  // Clean up audio context
+  if (audioContext.value && audioContext.value.state !== 'closed') {
+    audioContext.value.close()
+  }
+})
+
+// Watch for auth changes
+watch(() => currentUser.value, async (newUser) => {
+  if (newUser && medley.value && medley.value.id) {
+    await loadHeartedTracks()
+    await loadPurchasedTracks()
+  }
+})
+</script>
+
 <template>
   <div class="medley-page">
     <!-- Simplified Header Section -->
@@ -268,579 +902,6 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { db, auth } from '@/firebase'
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
-import { onAuthStateChanged } from 'firebase/auth'
-import { apiService } from '@/services/api'
-import SessionMeters from '@/components/SessionMeters.vue'
-import SessionSpectroscope from '@/components/SessionSpectroscope.vue'
-
-const route = useRoute()
-const router = useRouter()
-
-// State
-const medley = ref(null)
-const artist = ref(null)
-const loading = ref(true)
-const error = ref(null)
-const currentTrack = ref(null)
-const currentTrackIndex = ref(0)
-const isPlaying = ref(false)
-const audioContext = ref(null)
-const audioElement = ref(null)
-const mediaElementSource = ref(null)
-const currentTime = ref(0)
-const duration = ref(0)
-const currentUser = ref(null)
-const heartedTracks = ref(new Set())
-const heartingTrack = ref(null)
-const showCopyModal = ref(false)
-const downloadUrls = ref({})
-const purchasingTrack = ref(null)
-const purchaseError = ref(null)
-
-// Add analyser node refs
-const leftMetersAnalyser = ref(null)
-const rightMetersAnalyser = ref(null)
-const spectroscopeAnalyser = ref(null)
-
-// Default fallback image - using a data URL for a simple placeholder
-const DEFAULT_COVER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"%3E%3Crect width="400" height="400" fill="%23333"%2F%3E%3Cpath d="M200 140c-33.137 0-60 26.863-60 60s26.863 60 60 60 60-26.863 60-60-26.863-60-60-60zm0 100c-22.091 0-40-17.909-40-40s17.909-40 40-40 40 17.909 40 40-17.909 40-40 40z" fill="%23666"%2F%3E%3Cpath d="M200 180c-11.046 0-20 8.954-20 20s8.954 20 20 20 20-8.954 20-20-8.954-20-20-20z" fill="%23999"%2F%3E%3C/svg%3E'
-
-// Auth listener
-onAuthStateChanged(auth, (user) => {
-  currentUser.value = user
-  if (user && medley.value) {
-    loadHeartedTracks()
-  }
-})
-
-// Computed
-const coverImage = computed(() => {
-  // Try to get cover image from various sources
-  const url = medley.value?.coverUrl || 
-              artist.value?.profileImageUrl || 
-              artist.value?.coverImageUrl ||
-              artist.value?.imageUrl ||
-              DEFAULT_COVER
-  return url
-})
-
-const progress = computed(() => {
-  if (!duration.value) return 0
-  return (currentTime.value / duration.value) * 100
-})
-
-const formattedCurrentTime = computed(() => {
-  return formatTime(currentTime.value)
-})
-
-const formattedDuration = computed(() => {
-  return formatTime(duration.value)
-})
-
-const artistThumbnail = computed(() => {
-  // Check for primary photo thumbnail first (from ArtistPhotos feature)
-  if (artist.value?.primaryPhotoThumbnail) {
-    return artist.value.primaryPhotoThumbnail
-  }
-  // Fall back to other image sources
-  return artist.value?.profileImageUrl || 
-         artist.value?.coverImageUrl ||
-         artist.value?.imageUrl ||
-         null
-})
-
-// Add image error handler
-const handleImageError = (location, event) => {
-  console.error(`Image failed to load at ${location}:`, event.target.src)
-  // Set the fallback image
-  event.target.src = DEFAULT_COVER
-}
-
-// Initialize analyser nodes
-const initializeAnalysers = () => {
-  if (!audioContext.value) return
-
-  // Initialize meters analysers
-  leftMetersAnalyser.value = audioContext.value.createAnalyser()
-  leftMetersAnalyser.value.fftSize = 1024
-  leftMetersAnalyser.value.smoothingTimeConstant = 0.5
-  leftMetersAnalyser.value.minDecibels = -45
-  leftMetersAnalyser.value.maxDecibels = 6
-
-  rightMetersAnalyser.value = audioContext.value.createAnalyser()
-  rightMetersAnalyser.value.fftSize = 1024
-  rightMetersAnalyser.value.smoothingTimeConstant = 0.5
-  rightMetersAnalyser.value.minDecibels = -45
-  rightMetersAnalyser.value.maxDecibels = 6
-
-  // Initialize spectroscope analyser
-  spectroscopeAnalyser.value = audioContext.value.createAnalyser()
-  spectroscopeAnalyser.value.fftSize = 16384
-  spectroscopeAnalyser.value.minDecibels = -90
-  spectroscopeAnalyser.value.maxDecibels = 0
-  spectroscopeAnalyser.value.smoothingTimeConstant = 0.85
-  spectroscopeAnalyser.value.channelCount = 2
-  spectroscopeAnalyser.value.channelCountMode = 'explicit'
-  spectroscopeAnalyser.value.channelInterpretation = 'discrete'
-}
-
-// Methods
-const loadMedley = async () => {
-  try {
-    loading.value = true
-    error.value = null
-    
-    let artistSlug = ''
-    
-    // Get the artist slug from route params
-    artistSlug = route.params.artistSlug
-    
-    if (!artistSlug) {
-      error.value = 'Invalid artist URL'
-      return
-    }
-    
-    // Find artist by slug
-    const artistQuery = query(
-      collection(db, 'artistProfiles'),
-      where('customSlug', '==', artistSlug)
-    )
-    
-    const artistSnapshot = await getDocs(artistQuery)
-    
-    if (artistSnapshot.empty) {
-      error.value = 'Artist not found'
-      return
-    }
-    
-    artist.value = {
-      id: artistSnapshot.docs[0].id,
-      ...artistSnapshot.docs[0].data()
-    }
-    
-    // Create a medley object from artist data
-    medley.value = {
-      id: artist.value.id,
-      name: `${artist.value.name}'s Medley`,
-      artistId: artist.value.id,
-      coverUrl: artist.value.profileImageUrl || artist.value.coverImageUrl || artist.value.imageUrl,
-      description: artist.value.bio || '',
-      tracks: []
-    }
-    
-    // Load medley tracks
-    const tracksQuery = query(
-      collection(db, 'medleyTracks'),
-      where('artistId', '==', artist.value.id),
-      orderBy('order', 'asc')
-    )
-    
-    const tracksSnapshot = await getDocs(tracksQuery)
-    medley.value.tracks = tracksSnapshot.docs.map(doc => {
-      const trackData = {
-        id: doc.id,
-        ...doc.data()
-      }
-      return trackData
-    })
-    
-    // Update page title
-    document.title = `${artist.value.name} - Medley | 4track`
-    
-    // Track page view
-    apiService.trackPageView('medley', artist.value.id, document.referrer)
-    
-    // Load hearted tracks if user is logged in
-    if (currentUser.value) {
-      await loadHeartedTracks()
-      await loadPurchasedTracks()
-    }
-    
-    // Auto-play first track if available
-    if (medley.value.tracks?.length > 0) {
-      selectTrack(medley.value.tracks[0], 0)
-    }
-  } catch (err) {
-    console.error('Error loading medley:', err)
-    error.value = 'Failed to load medley'
-  } finally {
-    loading.value = false
-  }
-}
-
-const loadHeartedTracks = async () => {
-  if (!currentUser.value || !medley.value?.tracks) return
-  
-  try {
-    // Load from userCollections
-    const collectionQuery = query(
-      collection(db, 'userCollections'),
-      where('userEmail', '==', currentUser.value.email),
-      where('artistId', '==', artist.value.id)
-    )
-    
-    const collectionSnapshot = await getDocs(collectionQuery)
-    const hearted = new Set()
-    
-    collectionSnapshot.forEach(doc => {
-      const data = doc.data()
-      if (data.trackId) {
-        hearted.add(data.trackId)
-      }
-    })
-    
-    heartedTracks.value = hearted
-  } catch (err) {
-    console.error('Error loading hearted tracks:', err)
-  }
-}
-
-const selectTrack = (track, index) => {
-  if (currentTrack.value?.id === track.id && isPlaying.value) {
-    togglePlay()
-  } else {
-    currentTrack.value = track
-    currentTrackIndex.value = index
-    loadTrack(track)
-  }
-}
-
-const loadTrack = async (track) => {
-  if (!track.audioUrl) {
-    console.error('No audio URL for track:', track)
-    return
-  }
-  
-  try {
-    // Stop current playback if any
-    stopPlayback()
-    
-    // Create or reuse HTML5 audio element
-    if (!audioElement.value) {
-      audioElement.value = new Audio()
-      audioElement.value.crossOrigin = 'anonymous' // Required for CORS
-      
-      // Set up event listeners once
-      audioElement.value.addEventListener('loadedmetadata', () => {
-        duration.value = audioElement.value.duration
-      })
-      
-      audioElement.value.addEventListener('timeupdate', () => {
-        currentTime.value = audioElement.value.currentTime
-      })
-      
-      audioElement.value.addEventListener('ended', async () => {
-        if (isPlaying.value) {
-          isPlaying.value = false
-          await nextTrack()
-        }
-      })
-      
-      audioElement.value.addEventListener('error', (e) => {
-        console.error('Audio loading error:', e)
-        error.value = 'Failed to load audio'
-      })
-    }
-    
-    // Set the new source
-    audioElement.value.src = track.audioUrl
-    audioElement.value.load() // Force reload
-    
-    // Initialize Web Audio API context if needed
-    if (!audioContext.value) {
-      audioContext.value = new (window.AudioContext || window.webkitAudioContext)()
-      initializeAnalysers()
-    }
-    
-    // Create MediaElementSource from HTML5 audio (only once per audio element)
-    if (!mediaElementSource.value && audioElement.value) {
-      mediaElementSource.value = audioContext.value.createMediaElementSource(audioElement.value)
-      
-      // Create a channel splitter for stereo analysis
-      const splitter = audioContext.value.createChannelSplitter(2)
-      
-      // Connect source to splitter
-      mediaElementSource.value.connect(splitter)
-      
-      // Connect left channel to left meters analyser
-      splitter.connect(leftMetersAnalyser.value, 0)
-      
-      // Connect right channel to right meters analyser
-      splitter.connect(rightMetersAnalyser.value, 1)
-      
-      // Connect source directly to spectroscope (for stereo analysis)
-      mediaElementSource.value.connect(spectroscopeAnalyser.value)
-      
-      // Connect to destination for audio output
-      mediaElementSource.value.connect(audioContext.value.destination)
-    }
-    
-    // Reset time values
-    currentTime.value = 0
-    
-  } catch (err) {
-    console.error('Error loading track:', err)
-    error.value = 'Failed to load track'
-  }
-}
-
-const startPlayback = async () => {
-  if (!audioElement.value || !currentTrack.value) return
-  
-  try {
-    // Resume audio context if suspended (required for some browsers)
-    if (audioContext.value && audioContext.value.state === 'suspended') {
-      await audioContext.value.resume()
-    }
-    
-    await audioElement.value.play()
-    isPlaying.value = true
-    
-    // Track play event
-    apiService.trackEvent('play', 'medley', artist.value.id, {
-      trackId: currentTrack.value.id,
-      trackTitle: currentTrack.value.title
-    })
-  } catch (error) {
-    console.error('Playback error:', error)
-    isPlaying.value = false
-    if (error.name === 'NotAllowedError') {
-      error.value = 'Please click play to start audio'
-    }
-  }
-}
-
-const stopPlayback = () => {
-  if (audioElement.value) {
-    audioElement.value.pause()
-    audioElement.value.currentTime = 0
-  }
-  isPlaying.value = false
-}
-
-const togglePlay = () => {
-  if (isPlaying.value) {
-    pausePlayback()
-  } else {
-    startPlayback()
-  }
-}
-
-const pausePlayback = () => {
-  if (audioElement.value) {
-    audioElement.value.pause()
-  }
-  isPlaying.value = false
-  
-  // Track pause event
-  if (currentTrack.value) {
-    apiService.trackEvent('pause', 'medley', artist.value.id, {
-      trackId: currentTrack.value.id,
-      currentTime: currentTime.value
-    })
-  }
-}
-
-const seekToPosition = (event) => {
-  if (!audioElement.value || !duration.value) return
-  
-  const rect = event.currentTarget.getBoundingClientRect()
-  const x = event.clientX - rect.left
-  const percentage = Math.max(0, Math.min(1, x / rect.width))
-  audioElement.value.currentTime = percentage * duration.value
-}
-
-const previousTrack = async () => {
-  if (currentTrackIndex.value > 0) {
-    const prevIndex = currentTrackIndex.value - 1
-    await selectTrack(medley.value.tracks[prevIndex], prevIndex)
-    if (isPlaying.value) {
-      await startPlayback()
-    }
-  }
-}
-
-const nextTrack = async () => {
-  if (currentTrackIndex.value < medley.value.tracks.length - 1) {
-    const nextIndex = currentTrackIndex.value + 1
-    await selectTrack(medley.value.tracks[nextIndex], nextIndex)
-    // Auto-play next track
-    await startPlayback()
-  } else {
-    // End of playlist
-    stopPlayback()
-  }
-}
-
-const toggleHeart = async (track) => {
-  if (!currentUser.value) {
-    router.push('/login')
-    return
-  }
-  
-  heartingTrack.value = track.id
-  
-  try {
-    // Check if already in collection
-    const collectionQuery = query(
-      collection(db, 'userCollections'),
-      where('userEmail', '==', currentUser.value.email),
-      where('trackId', '==', track.id)
-    )
-    
-    const collectionSnapshot = await getDocs(collectionQuery)
-    
-    if (!collectionSnapshot.empty) {
-      // Remove from collection
-      for (const doc of collectionSnapshot.docs) {
-        await apiService.removeFromCollection(doc.id)
-      }
-      heartedTracks.value.delete(track.id)
-    } else {
-      // Add to collection
-      await addDoc(collection(db, 'userCollections'), {
-        userId: currentUser.value.uid,
-        userEmail: currentUser.value.email,
-        trackId: track.id,
-        artistId: artist.value.id,
-        timestamp: serverTimestamp(),
-        type: 'hearted',
-        isPurchased: false
-      })
-      heartedTracks.value.add(track.id)
-    }
-  } catch (err) {
-    console.error('Error toggling heart:', err)
-  } finally {
-    heartingTrack.value = null
-  }
-}
-
-const purchaseTrack = async (track) => {
-  if (!currentUser.value) {
-    router.push(`/login?return=${encodeURIComponent(window.location.pathname)}`)
-    return
-  }
-  
-  purchasingTrack.value = track.id
-  purchaseError.value = null
-  
-  try {
-    const result = await apiService.createMedleyPayPalOrder(
-      medley.value.id,
-      track.id
-    )
-    
-    if (result.approveUrl) {
-      window.location.href = result.approveUrl
-    }
-  } catch (err) {
-    console.error('Purchase error:', err)
-    purchaseError.value = err.message || 'Failed to create checkout session'
-    purchasingTrack.value = null
-  }
-}
-
-const downloadFreeTrack = async (track) => {
-  if (!currentUser.value) {
-    router.push(`/login?return=${encodeURIComponent(window.location.pathname)}`)
-    return
-  }
-  
-  purchasingTrack.value = track.id
-  purchaseError.value = null
-  
-  try {
-    const result = await apiService.processFreeDownload(
-      medley.value.id,
-      track.id
-    )
-    
-    if (result.downloadUrl) {
-      downloadUrls.value[track.id] = result.downloadUrl
-      window.open(result.downloadUrl, '_blank')
-    }
-  } catch (err) {
-    console.error('Download error:', err)
-    purchaseError.value = err.message || 'Failed to process download'
-  } finally {
-    purchasingTrack.value = null
-  }
-}
-
-// Helper functions
-const formatTime = (seconds) => {
-  if (!seconds || isNaN(seconds)) return '0:00'
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
-const formatDuration = (seconds) => {
-  if (!seconds) return '0:00'
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
-// Load purchased tracks on mount
-const loadPurchasedTracks = async () => {
-  // Add guards to ensure both values exist
-  if (!currentUser.value || !medley.value || !medley.value.id) return
-  
-  try {
-    // Check purchases collection for this user's purchases
-    const purchasesQuery = query(
-      collection(db, 'medleyRoyalties'),
-      where('payerEmail', '==', currentUser.value.email),
-      where('artistId', '==', medley.value.id),
-      where('type', 'in', ['purchase', 'free_download'])
-    )
-    
-    const purchasesSnapshot = await getDocs(purchasesQuery)
-    purchasesSnapshot.forEach(doc => {
-      const purchase = doc.data()
-      if (purchase.trackId && purchase.downloadUrl) {
-        downloadUrls.value[purchase.trackId] = purchase.downloadUrl
-      }
-    })
-  } catch (err) {
-    console.error('Error loading purchased tracks:', err)
-  }
-}
-
-// Lifecycle
-onMounted(() => {
-  loadMedley()
-})
-
-onUnmounted(() => {
-  // Clean up audio element
-  if (audioElement.value) {
-    audioElement.value.pause()
-    audioElement.value.src = ''
-  }
-  
-  // Clean up audio context
-  if (audioContext.value && audioContext.value.state !== 'closed') {
-    audioContext.value.close()
-  }
-})
-
-// Watch for auth changes
-watch(() => currentUser.value, async (newUser) => {
-  if (newUser && medley.value && medley.value.id) {
-    await loadHeartedTracks()
-    await loadPurchasedTracks()
-  }
-})
-</script>
 
 <style scoped>
 /* Base Styles */

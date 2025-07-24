@@ -12,6 +12,12 @@ const db = getFirestore();
 const auth = getAuth();
 const storage = getStorage();
 
+// Import analytics functions
+const { collectPageAnalytics } = require('./analyticsFunctions');
+
+// Export analytics function
+exports.collectAnalytics = collectPageAnalytics;
+
 // PayPal configuration
 const PAYPAL_CLIENT_ID = defineSecret('PAYPAL_CLIENT_ID');
 const PAYPAL_CLIENT_SECRET = defineSecret('PAYPAL_CLIENT_SECRET');

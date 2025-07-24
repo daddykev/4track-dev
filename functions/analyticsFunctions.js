@@ -31,7 +31,6 @@ const collectPageAnalytics = onRequest({
     
     switch (pageType) {
       case 'artist':
-        // Artist pages only require artistId
         if (!analyticsData.artistId) {
           res.status(400).json({ success: false, error: 'Missing artistId for artist page' });
           return;
@@ -39,9 +38,16 @@ const collectPageAnalytics = onRequest({
         break;
         
       case 'label':
-        // Label pages only require labelId
         if (!analyticsData.labelId) {
           res.status(400).json({ success: false, error: 'Missing labelId for label page' });
+          return;
+        }
+        break;
+        
+      case 'medley':
+        // Medley pages only require artistId
+        if (!analyticsData.artistId) {
+          res.status(400).json({ success: false, error: 'Missing artistId for medley page' });
           return;
         }
         break;
@@ -49,7 +55,6 @@ const collectPageAnalytics = onRequest({
       case 'product':
       case 'release':
       default:
-        // Product/release pages require both artistId and productId
         if (!analyticsData.artistId || !analyticsData.productId) {
           res.status(400).json({ success: false, error: 'Missing required fields for product page' });
           return;
