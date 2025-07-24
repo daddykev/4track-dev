@@ -1,16 +1,16 @@
-# 4track - Open Source Music Platform Blueprint
+# 4track - Open Source Music Platform - Dev Blueprint
 
 ## Overview
 
-4track is an open source music platform that enables independent artists to share their music directly with fans through customizable medley players and direct PayPal payments. It's the free tier component of the larger MusicDrop ecosystem, designed to be self-hostable and community-driven.
+4track is an open source music platform that enables independent artists to monetize their music directly with listeners through a customizable media player and direct PayPal gateway. It's the free tier component of the larger MusicDrop ecosystem, designed to be self-hostable and community-driven.
 
 ## Platform Philosophy
 
-- **Artist-First**: 100% of payments go directly to artists via PayPal
+- **Artist-First**: 100% of revenue directly to artists via PayPal
 - **Open Source**: Fully transparent, community-driven development
-- **Privacy-Focused**: No cookies, minimal data collection, GDPR compliant
+- **Privacy-First Design**: No cookies, minimal data collection, GDPR and CCPA compliant
 - **Free Forever**: Core features always free for artists and fans
-- **Direct Support**: Fans support artists directly without intermediaries
+- **Direct Support**: Listeners support artists directly without intermediaries
 
 ## Technical Stack
 
