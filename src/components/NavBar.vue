@@ -150,7 +150,12 @@ onMounted(() => {
       <!-- Desktop Navigation -->
       <div class="navbar-menu" :class="{ 'active': mobileMenuOpen }">
         <div class="navbar-start">
-          <router-link to="/discover" class="navbar-item" @click="closeMobileMenu">
+          <router-link 
+            v-if="user"
+            to="/discover" 
+            class="navbar-item" 
+            @click="closeMobileMenu"
+          >
             <font-awesome-icon :icon="['fas', 'search']" class="navbar-icon" />
             <span>Discover</span>
           </router-link>
