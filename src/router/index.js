@@ -17,6 +17,7 @@ import ArtistStudio from '../views/ArtistStudio.vue'
 import ArtistMedley from '../views/ArtistMedley.vue'
 import AdminUsers from '../views/AdminUsers.vue'
 import AdminArtists from '../views/AdminArtists.vue'
+import ArtistRoster from '../views/ArtistRoster.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -74,6 +75,16 @@ const router = createRouter({
       name: 'artist-medley-edit',
       component: ArtistMedley,
       meta: { title: 'Manage Medley - 4track', requiresAuth: true, requiresArtist: true }
+    },
+    {
+      path: '/roster',
+      name: 'artist-roster',
+      component: ArtistRoster,
+      meta: { 
+        title: 'Artist Roster - 4track', 
+        requiresAuth: true,
+        requiresRosterAccess: true 
+      }
     },
     {
       path: '/:artistSlug',
@@ -159,11 +170,10 @@ router.beforeEach(async (to, from, next) => {
     if (!isAuthenticated) {
       next({ name: 'login', query: { return: to.fullPath } })
     } else if (to.meta.requiresArtist && userData?.userType !== 'artist') {
-      // If route requires artist and user is not an artist, redirect to create artist
       next({ name: 'create-artist' })
-    } else if (to.meta.requiresAdmin && userData?.userType !== 'admin') {
-      // If route requires admin and user is not an admin, redirect to home
-      next({ name: 'home' })
+    } else if (to.meta.requiresRosterAccess && !['admin', 'label', 'manager'].includes(userData?.userType)) {
+      // Redirect non-authorized users
+      next({ name: 'discover' })
     } else {
       next()
     }

@@ -73,6 +73,7 @@ fourtrack-os/
 │   │   ├── AdminArtists.vue    # Admin: Review artist applications
 │   │   ├── AdminUsers.vue      # Admin: User management dashboard
 │   │   ├── ArtistMedley.vue    # Medley management
+│   │   ├── ArtistRoster.vue    # Multi-artist management for admin/label/manager users
 │   │   ├── CreateArtist.vue    # Artist onboarding (requires verified email)
 │   │   ├── DiscoverPage.vue    # Music discover
 │   │   ├── HomePage.vue        # Landing page
@@ -125,6 +126,13 @@ fourtrack-os/
 3. **Direct Support** - Pay artists directly via PayPal
 4. **Download Library** - Access purchased tracks anytime
 5. **Heart Tracks** - Save favorites for later purchase
+
+### For Labels & Managers
+1. **Artist Roster** - Centralized multi-artist management
+2. **Create Artists** - Add new artist profiles with Spotify integration
+3. **Hierarchical Access** - Manage multiple artists from one account
+4. **Role-Based Permissions** - Admin sees all, others see their artists
+5. **Quick Actions** - Navigate to medley management or public pages
 
 ### For Admins
 1. **User Management** - View all users and their roles
@@ -209,7 +217,8 @@ fourtrack-os/
   hasPublicMedley: boolean,
   createdBy: string (userId),
   createdAt: timestamp,
-  platform: '4track'
+  platform: '4track',
+  spotifyArtistId: string // Optional Spotify ID
 }
 ```
 
@@ -268,6 +277,17 @@ fourtrack-os/
   timestamp: timestamp
 }
 ```
+
+## Utility Functions
+
+### permissions.js
+Centralized permission checking for role-based access control:
+- `canViewArtistRoster()` - Check roster access
+- `canCreateArtist()` - Check artist creation permission
+- `hasArtistAccess()` - Verify access to specific artist
+- `getAccessibleArtists()` - Retrieve all artists user can manage
+- `getRoleLabel()` - Format role for display
+- `extractSpotifyArtistId()` - Parse Spotify URLs
 
 ## Authentication Flow
 
@@ -354,6 +374,12 @@ Admin interface for artist application review:
 - No personal data storage
 - Geographic aggregation only
 
+#### Artist Roster Management
+- Multi-artist overview for label/manager accounts
+- Create new artist profiles with optional Spotify import
+- Hierarchical permission system
+- Quick access to artist medleys and public pages
+
 ## User Types & Access Control
 
 ### User Types (userType field)
@@ -418,7 +444,8 @@ artistAccess: {
 |------------------|----------|---------|------------|------------|--------|
 | Music Collection | ✓        | ✓       | ✓          | ✓          | ✓      |
 | Purchase Tracks  | ✓        | ✓       | ✓          | ✓          | ✓      |
-| Create Artist.   | ✗        | ✓ (1)   | ✓ (∞)      | ✗          | ✓      |
+| Create Artist    | ✗        | ✓ (1)   | ✓ (∞)      | ✓ (∞)      | ✓      |
+| Artist Roster    | ✗        | ✗       | ✓          | ✓          | ✓      |
 | Manage Artists   | ✗        | ✓ (own) | ✓ (roster) | ✓ (shared) | ✓      |
 | View Analytics   | ✗        | ✓ (own) | ✓ (all)    | ✓ (shared) | ✓      |
 | Bulk Operations  | ✗        | ✗       | ✓          | ✗          | ✓      |
@@ -432,3 +459,6 @@ artistAccess: {
 - Application approval workflow prevents spam/abuse
 - PayPal email collected only when needed (paid tracks)
 - Admin routes protected by router navigation guards
+- **Artist roster access limited to admin, label, and manager users**
+- **Hierarchical permissions allow labels/managers to create and manage multiple artists**
+- **Spotify integration available during artist creation for metadata import**

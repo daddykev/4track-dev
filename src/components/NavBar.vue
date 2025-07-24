@@ -171,6 +171,16 @@ onMounted(() => {
           </router-link>
           
           <router-link 
+            v-if="['admin', 'label', 'manager'].includes(userData?.userType)"
+            to="/roster" 
+            class="navbar-item"
+            @click="closeMobileMenu"
+          >
+            <font-awesome-icon :icon="['fas', 'users']" class="dropdown-icon" />
+            Roster
+          </router-link>
+
+          <router-link 
             v-if="isArtistUser" 
             to="/studio" 
             class="navbar-item" 
