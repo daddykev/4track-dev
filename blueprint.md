@@ -8,8 +8,8 @@
 
 - **Artist-First**: 100% of revenue directly to artists via PayPal
 - **Open Source**: Fully transparent, community-driven development
-- **Privacy-First Design**: No cookies, minimal data collection, GDPR and CCPA compliant
-- **Free Forever**: Core features always free for artists and fans
+- **Privacy-First Design**: No cookies, minimal data collection, GDPR/CCPA compliant
+- **Free Forever**: Core features always free for artists and listeners
 - **Direct Support**: Listeners support artists directly without intermediaries
 
 ## Technical Stack
@@ -19,7 +19,7 @@
 - **Build Tool**: Vite
 - **Routing**: Vue Router
 - **Styling**: CSS with utility-first architecture
-- **Icons**: FontAwesome (free tier icons only)
+- **Icons**: FontAwesome
 - **Audio**: HTML5 Audio for playback, Web Audio API for visualizations
 
 ### Backend
@@ -42,9 +42,9 @@ fourtrack-os/
 ├── src/
 │   ├── assets/                 # CSS and static assets
 │   │   ├── base.css            # Base resets and typography
+│   │   ├── components.css      # Reusable utility classes
 │   │   ├── main.css            # Global styles
-│   │   ├── themes.css          # CSS custom properties
-│   │   └── components.css      # Reusable utility classes
+│   │   └── themes.css          # CSS custom properties
 │   │
 │   ├── components/             # Reusable Vue components
 │   │   ├── FourTrackNav.vue    # Main navigation
@@ -59,24 +59,24 @@ fourtrack-os/
 │   │   └── index.js            # Route definitions
 │   │
 │   ├── services/               # API and business logic
-│   │   ├── auth.js             # Authentication service with email verification
-│   │   └── api.js              # API service wrapper
+│   │   ├── api.js              # API service wrapper
+│   │   └── auth.js             # Authentication service with email verification
 │   │
 │   ├── utils/                  # Utility functions
 │   │   ├── formatters.js       # Data formatting utilities
 │   │   └── validators.js       # Input validation utilities
 │   │
 │   ├── views/                  # Page components
+│   │   ├── ArtistMedley.vue    # Medley management
+│   │   ├── CreateArtist.vue    # Artist onboarding (requires verified email)
+│   │   ├── DiscoverPage.vue    # Music discover
 │   │   ├── HomePage.vue        # Landing page
 │   │   ├── LoginPage.vue       # User login
-│   │   ├── SignupPage.vue      # User registration with email verification
-│   │   ├── DiscoverPage.vue    # Music discovery
-│   │   ├── CreateArtist.vue    # Artist onboarding (requires verified email)
-│   │   ├── ArtistMedley.vue    # Medley management
-│   │   ├── UserProfile.vue     # User settings
-│   │   ├── MusicCollection.vue # User's music library
 │   │   ├── MedleyPage.vue      # Public medley player
-│   │   └── MedleySuccess.vue   # PayPal success callback
+│   │   ├── MedleySuccess.vue   # PayPal success callback
+│   │   ├── MusicCollection.vue # User's music library
+│   │   ├── SignupPage.vue      # User registration with email verificationy
+│   │   └── UserProfile.vue     # User settings
 │   │
 │   ├── App.vue                 # Root component
 │   ├── main.js                 # Application entry
@@ -131,7 +131,7 @@ fourtrack-os/
 ### Privacy & Security
 1. **No Cookies** - Zero tracking cookies
 2. **Session-Based** - Analytics use temporary session IDs
-3. **GDPR Compliant** - Minimal data collection
+3. **GDPR and CCPA Compliant** - Minimal data collection
 4. **Secure Payments** - PayPal handles all payment data
 5. **User Control** - Full data export and deletion
 
