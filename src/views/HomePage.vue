@@ -19,6 +19,17 @@
             Explore Music
           </router-link>
         </div>
+        <div class="hero-github">
+          <a 
+            href="https://github.com/daddykev/4track-dev" 
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-github"
+          >
+            <font-awesome-icon :icon="['fab', 'github']" />
+            GitHub
+          </a>
+        </div>
       </div>
     </section>
 
@@ -333,6 +344,35 @@ onMounted(() => {
   line-height: 1.6;
 }
 
+/* GitHub row */
+.hero-github {
+  margin-top: var(--spacing-xl);
+  display: flex;
+  justify-content: center;
+}
+
+/* GitHub Button - smaller size */
+.btn-github {
+  background-color: #24292e;
+  color: var(--text-inverse);
+  border: none;
+  font-weight: 600;
+  font-size: var(--font-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  text-decoration: none;
+  transition: all var(--transition-normal);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  border-radius: var(--radius-md);
+}
+
+.btn-github:hover {
+  background-color: #2ea043;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
 /* CTA Section */
 .cta-section {
   padding: var(--spacing-2xl) var(--spacing-xl);
@@ -426,12 +466,22 @@ onMounted(() => {
   }
   
   .hero-cta,
-  .hero-cta-secondary {
+  .hero-cta-secondary,
+  .btn-github {
     width: 100%;
     max-width: 280px;
     justify-content: center;
   }
   
+  .hero-github {
+    margin-top: var(--spacing-lg);
+  }
+  
+  .btn-github {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-xs);
+  }
+
   .features-section,
   .how-it-works-section {
     padding: var(--spacing-2xl) 0;

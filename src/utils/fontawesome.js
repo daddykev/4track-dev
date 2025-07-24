@@ -33,7 +33,8 @@ import {
 // Import brands
 import {
   faGoogle,
-  faPaypal
+  faPaypal,
+  faGithub
 } from '@fortawesome/free-brands-svg-icons'
 
 // Add icons to library
@@ -65,7 +66,8 @@ library.add(
   faBars,
   // Brand icons
   faGoogle,
-  faPaypal
+  faPaypal,
+  faGithub
 )
 
 export { FontAwesomeIcon }
