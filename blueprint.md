@@ -47,6 +47,7 @@ fourtrack-os/
 │   │   └── themes.css          # CSS custom properties
 │   │
 │   ├── components/             # Reusable Vue components
+│   │   ├── CustomIcon.vue      # Reusable component for rendering SVG icons
 │   │   ├── FourTrackNav.vue    # Main navigation
 │   │   ├── SessionMeters.vue   # Audio level meters
 │   │   ├── SessionSpectroscope.vue # Frequency analyzer
@@ -63,6 +64,7 @@ fourtrack-os/
 │   │   └── auth.js             # Authentication service with email verification
 │   │
 │   ├── utils/                  # Utility functions
+│   │   ├── customIcons.js      # Custom SVG icon definitions
 │   │   ├── fontawesome.js      # FontAwesome configuration
 │   │   ├── formatters.js       # Data formatting utilities
 │   │   └── validators.js       # Input validation utilities

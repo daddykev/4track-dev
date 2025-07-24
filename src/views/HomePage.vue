@@ -4,7 +4,7 @@
       <div class="hero-content">
         <h1 class="hero-title">
           4track
-          <font-awesome-icon icon="fa-solid fa-music" class="title-icon" />
+          <CustomIcon name="cassetteTape" class="title-icon" />
         </h1>
         <p class="hero-subtitle">
           Next-gen indie music platform
@@ -112,6 +112,7 @@
 
 <script setup>
 import { onMounted } from 'vue'
+import CustomIcon from '@/components/CustomIcon.vue'
 
 onMounted(() => {
   document.title = '4track - Next-gen indie music platform'
@@ -119,7 +120,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* All your existing styles remain the same */
 /* Hero Section */
 .hero-section {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
@@ -148,7 +148,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm); /* Changed from var(--spacing-md) to var(--spacing-sm) */
   white-space: nowrap;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
   color: var(--text-inverse);
@@ -157,7 +157,13 @@ onMounted(() => {
 .title-icon {
   color: var(--text-inverse);
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-  font-size: 0.85em;
+  font-size: 1.1em;
+}
+
+/* Make sure custom icon scales properly */
+.hero-title .custom-icon {
+  width: 1.1em;
+  height: 1.1em;
 }
 
 .hero-subtitle {
@@ -238,7 +244,7 @@ onMounted(() => {
   gap: var(--spacing-md);
 }
 
-.section-title .svg-inline--fa { /* targeting FA component */
+.section-title .svg-inline--fa {
   color: var(--color-primary);
 }
 
@@ -386,7 +392,7 @@ onMounted(() => {
   cursor: pointer;
 }
 
-.btn .svg-inline--fa { /* targeting FA component */
+.btn .svg-inline--fa {
   font-size: 0.9em;
 }
 
