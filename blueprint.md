@@ -48,7 +48,7 @@ fourtrack-os/
 │   │
 │   ├── components/             # Reusable Vue components
 │   │   ├── CustomIcon.vue      # Reusable component for rendering SVG icons
-│   │   ├── FourTrackNav.vue    # Main navigation
+│   │   ├── NavBar.vue          # Main navigation
 │   │   ├── SessionMeters.vue   # Audio level meters
 │   │   ├── SessionSpectroscope.vue # Frequency analyzer
 │   │   └── EmailVerificationBanner.vue # Email verification reminder

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
 import { signOut, onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, getDocs } from 'firebase/firestore'
+import CustomIcon from '@/components/CustomIcon.vue'
 
 const router = useRouter()
 
@@ -137,8 +138,8 @@ onMounted(() => {
     <div class="navbar-container">
       <!-- Logo/Brand -->
       <router-link to="/" class="navbar-brand">
-        <font-awesome-icon :icon="['fas', 'music']" class="brand-icon" />
         <span class="brand-text">4track</span>
+        <CustomIcon name="cassetteTape" class="brand-cassette-icon" />
       </router-link>
 
       <!-- Desktop Navigation -->
@@ -296,6 +297,18 @@ onMounted(() => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.brand-cassette-icon {
+  color: var(--color-primary);
+  font-size: 1.4em;
+  opacity: 0.8;
+  transition: opacity var(--transition-normal);
+  margin-left: -0.15em;
+}
+
+.navbar-brand:hover .brand-cassette-icon {
+  opacity: 1;
 }
 
 /* Navigation Menu */
