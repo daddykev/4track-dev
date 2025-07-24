@@ -15,7 +15,19 @@ import {
   faCreditCard,
   faPlus,
   faStar,
-  faCopy
+  faCopy,
+  faUser,
+  faSpinner,
+  faLock,
+  faVolumeUp,
+  faList,
+  faBackward,
+  faPause,
+  faForward,
+  faTimes,
+  faChevronDown,
+  faSignOutAlt,
+  faBars
 } from '@fortawesome/free-solid-svg-icons'
 
 // Import brands
@@ -39,6 +51,18 @@ library.add(
   faPlus,
   faStar,
   faCopy,
+  faUser,
+  faSpinner,
+  faLock,
+  faVolumeUp,
+  faList,
+  faBackward,
+  faPause,
+  faForward,
+  faTimes,
+  faChevronDown,
+  faSignOutAlt,
+  faBars,
   // Brand icons
   faGoogle,
   faPaypal
