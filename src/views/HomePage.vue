@@ -1,53 +1,51 @@
 <template>
   <div class="home-page">
-    <!-- Hero Section -->
     <section class="hero-section">
       <div class="hero-content">
         <h1 class="hero-title">
           4track
-          <i class="fas fa-music title-icon"></i>
+          <font-awesome-icon icon="fa-solid fa-music" class="title-icon" />
         </h1>
         <p class="hero-subtitle">
           Next-gen indie music platform
         </p>
         <div class="hero-actions">
           <router-link to="/signup" class="btn btn-primary btn-lg hero-cta">
-            <i class="fas fa-play"></i>
+            <font-awesome-icon icon="fa-solid fa-play" />
             Start Free
           </router-link>
           <router-link to="/discover" class="btn btn-secondary btn-lg hero-cta-secondary">
-            <i class="fas fa-search"></i>
+            <font-awesome-icon icon="fa-solid fa-search" />
             Explore Music
           </router-link>
         </div>
       </div>
     </section>
 
-    <!-- Features Section -->
     <section class="features-section">
       <div class="container">
         <h2 class="section-title">
-          <i class="fas fa-star"></i>
+          <font-awesome-icon icon="fa-solid fa-star" />
           Why 4track?
         </h2>
         <div class="features-grid">
           <div class="feature-card">
             <div class="feature-icon">
-              <i class="fas fa-dollar-sign"></i>
+              <font-awesome-icon icon="fa-solid fa-dollar-sign" />
             </div>
             <h3>Direct Support</h3>
             <p>100% of your purchases go directly to artists via PayPal</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">
-              <i class="fas fa-download"></i>
+              <font-awesome-icon icon="fa-solid fa-download" />
             </div>
             <h3>Own Your Music</h3>
             <p>Download tracks to keep forever, DRM-free</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">
-              <i class="fas fa-users"></i>
+              <font-awesome-icon icon="fa-solid fa-users" />
             </div>
             <h3>Discover Artists</h3>
             <p>Find new music from independent creators worldwide</p>
@@ -56,31 +54,30 @@
       </div>
     </section>
 
-    <!-- How It Works Section -->
     <section class="how-it-works-section">
       <div class="container">
         <h2 class="section-title">
-          <i class="fas fa-gear"></i>
+          <font-awesome-icon icon="fa-solid fa-gear" />
           How It Works
         </h2>
         <div class="steps-grid">
           <div class="step-card">
             <div class="step-number">
-              <i class="fas fa-play"></i>
+              <font-awesome-icon icon="fa-solid fa-play" />
             </div>
             <h3>Discover</h3>
             <p>Browse artist medleys and find your new favorite songs</p>
           </div>
           <div class="step-card">
             <div class="step-number">
-              <i class="fas fa-heart"></i>
+              <font-awesome-icon icon="fa-solid fa-heart" />
             </div>
             <h3>Save</h3>
             <p>Heart tracks you love to build your collection</p>
           </div>
           <div class="step-card">
             <div class="step-number">
-              <i class="fas fa-credit-card"></i>
+              <font-awesome-icon icon="fa-solid fa-credit-card" />
             </div>
             <h3>Support</h3>
             <p>Purchase tracks directly to support artists</p>
@@ -89,22 +86,21 @@
       </div>
     </section>
 
-    <!-- CTA Section -->
     <section class="cta-section">
       <div class="container">
         <div class="cta-content">
           <h2>
-            <i class="fas fa-users"></i>
+            <font-awesome-icon icon="fa-solid fa-users" />
             Ready to start your collection?
           </h2>
           <p>Join thousands of music lovers supporting independent artists</p>
           <div class="cta-buttons">
             <router-link to="/signup" class="btn btn-primary btn-lg">
-              <i class="fas fa-plus"></i>
+              <font-awesome-icon icon="fa-solid fa-plus" />
               Create Free Account
             </router-link>
             <router-link to="/discover" class="btn btn-outline btn-lg">
-              <i class="fas fa-search"></i>
+              <font-awesome-icon icon="fa-solid fa-search" />
               Discover Music
             </router-link>
           </div>
@@ -114,7 +110,6 @@
   </div>
 </template>
 
-<!-- Script and styles remain the same -->
 <script setup>
 import { onMounted } from 'vue'
 
@@ -243,7 +238,7 @@ onMounted(() => {
   gap: var(--spacing-md);
 }
 
-.section-title i {
+.section-title .svg-inline--fa { /* targeting FA component */
   color: var(--color-primary);
 }
 
@@ -391,7 +386,7 @@ onMounted(() => {
   cursor: pointer;
 }
 
-.btn i {
+.btn .svg-inline--fa { /* targeting FA component */
   font-size: 0.9em;
 }
 
