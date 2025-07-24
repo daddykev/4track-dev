@@ -15,8 +15,22 @@
         </router-link>
       </div>
 
-      <!-- Studio Content -->
-      <div v-else-if="artist">
+      <!-- No Artist Profile Yet -->
+      <div v-else-if="!artist" class="no-profile">
+        <div class="empty-state">
+          <font-awesome-icon :icon="['fas', 'microphone-alt']" class="empty-icon" />
+          <h2>Set Up Your Artist Profile</h2>
+          <p>You're registered as an artist, but you haven't created your profile yet.</p>
+          <p>Create your profile to start uploading music and sharing with fans!</p>
+          <router-link to="/artist/create" class="btn btn-primary btn-lg">
+            <font-awesome-icon :icon="['fas', 'plus']" />
+            Create Artist Profile
+          </router-link>
+        </div>
+      </div>
+
+      <!-- Studio Content (when artist profile exists) -->
+      <div v-else>
         <!-- Studio Header -->
         <div class="studio-header">
           <div class="artist-info">
@@ -102,69 +116,6 @@
           </div>
         </div>
 
-        <!-- Recent Activity -->
-        <div class="section-card">
-          <h2>
-            <font-awesome-icon :icon="['fas', 'clock']" />
-            Recent Activity
-          </h2>
-          
-          <div v-if="recentActivity.length > 0" class="activity-list">
-            <div 
-              v-for="activity in recentActivity" 
-              :key="activity.id"
-              class="activity-item"
-            >
-              <div class="activity-icon">
-                <font-awesome-icon 
-                  :icon="getActivityIcon(activity.type)" 
-                  :class="getActivityClass(activity.type)"
-                />
-              </div>
-              <div class="activity-content">
-                <p class="activity-description">{{ getActivityDescription(activity) }}</p>
-                <p class="activity-time">{{ formatRelativeTime(activity.timestamp) }}</p>
-              </div>
-              <div v-if="activity.amount" class="activity-amount">
-                +${{ activity.amount.toFixed(2) }}
-              </div>
-            </div>
-          </div>
-          
-          <div v-else class="empty-activity">
-            <p>No recent activity yet. Share your medley to start getting plays!</p>
-          </div>
-        </div>
-
-        <!-- Track Performance -->
-        <div v-if="tracks.length > 0" class="section-card">
-          <h2>
-            <font-awesome-icon :icon="['fas', 'chart-line']" />
-            Track Performance
-          </h2>
-          
-          <div class="tracks-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Track</th>
-                  <th>Price</th>
-                  <th>Downloads</th>
-                  <th>Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="track in trackStats" :key="track.trackId">
-                  <td>{{ track.trackTitle }}</td>
-                  <td>{{ track.price > 0 ? `$${track.price.toFixed(2)}` : 'Free' }}</td>
-                  <td>{{ track.downloads }}</td>
-                  <td>${{ track.revenue.toFixed(2) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
         <!-- Getting Started Tips -->
         <div v-if="!artist.hasPublicMedley" class="tips-card">
           <h3>
@@ -179,18 +130,6 @@
           </ol>
           <router-link :to="`/artist/${artist.id}/medley`" class="btn btn-primary mt-md">
             Create Your First Medley
-          </router-link>
-        </div>
-      </div>
-
-      <!-- No Artist Profile -->
-      <div v-else class="no-artist">
-        <div class="empty-state">
-          <font-awesome-icon :icon="['fas', 'microphone']" class="empty-icon" />
-          <h2>You're not an artist yet!</h2>
-          <p>Create your artist profile to start sharing music.</p>
-          <router-link to="/artist/create" class="btn btn-primary btn-lg">
-            Become an Artist
           </router-link>
         </div>
       </div>
@@ -218,8 +157,6 @@ const stats = ref({
   totalDownloads: 0,
   totalRevenue: 0
 })
-const recentActivity = ref([])
-const trackStats = ref([])
 const copied = ref(false)
 
 // Computed
@@ -252,7 +189,8 @@ const loadArtistData = async () => {
     const artistSnapshot = await getDocs(artistQuery)
     
     if (artistSnapshot.empty) {
-      // User is not an artist yet
+      // User is an artist but hasn't created a profile yet
+      // This is handled by the template showing the "Set Up Your Artist Profile" section
       loading.value = false
       return
     }
@@ -267,9 +205,6 @@ const loadArtistData = async () => {
     
     // Load analytics
     await loadAnalytics()
-    
-    // Load recent activity
-    await loadRecentActivity()
     
   } catch (err) {
     console.error('Error loading artist data:', err)
@@ -312,17 +247,6 @@ const loadAnalytics = async () => {
       totalRevenue: analyticsData.totalRevenue || 0
     }
     
-    trackStats.value = analyticsData.trackAnalytics || []
-    
-    // Add price info to track stats
-    trackStats.value = trackStats.value.map(stat => {
-      const track = tracks.value.find(t => t.id === stat.trackId)
-      return {
-        ...stat,
-        price: track?.price || 0
-      }
-    })
-    
   } catch (err) {
     console.error('Error loading analytics:', err)
   }
@@ -344,39 +268,6 @@ const getHeartCount = async () => {
   }
 }
 
-const loadRecentActivity = async () => {
-  if (!artist.value) return
-  
-  try {
-    // Get recent transactions
-    const royaltiesQuery = query(
-      collection(db, 'medleyRoyalties'),
-      where('artistId', '==', artist.value.id),
-      orderBy('timestamp', 'desc'),
-      limit(10)
-    )
-    
-    const royaltiesSnapshot = await getDocs(royaltiesQuery)
-    const activities = []
-    
-    royaltiesSnapshot.forEach(doc => {
-      const data = doc.data()
-      activities.push({
-        id: doc.id,
-        type: data.type,
-        trackTitle: data.trackTitle,
-        amount: data.amount,
-        timestamp: data.timestamp,
-        payerEmail: data.payerEmail
-      })
-    })
-    
-    recentActivity.value = activities
-  } catch (err) {
-    console.error('Error loading recent activity:', err)
-  }
-}
-
 const copyLink = async () => {
   try {
     await navigator.clipboard.writeText(publicUrl.value)
@@ -388,58 +279,52 @@ const copyLink = async () => {
     console.error('Failed to copy:', err)
   }
 }
-
-const getActivityIcon = (type) => {
-  const icons = {
-    'purchase': ['fas', 'download'],
-    'free_download': ['fas', 'gift'],
-    'play': ['fas', 'play'],
-    'heart': ['fas', 'heart']
-  }
-  return icons[type] || ['fas', 'circle']
-}
-
-const getActivityClass = (type) => {
-  const classes = {
-    'purchase': 'text-success',
-    'free_download': 'text-info',
-    'play': 'text-primary',
-    'heart': 'text-danger'
-  }
-  return classes[type] || ''
-}
-
-const getActivityDescription = (activity) => {
-  switch (activity.type) {
-    case 'purchase':
-      return `Someone purchased "${activity.trackTitle}"`
-    case 'free_download':
-      return `Someone downloaded "${activity.trackTitle}" for free`
-    default:
-      return `Activity on "${activity.trackTitle}"`
-  }
-}
-
-const formatRelativeTime = (timestamp) => {
-  if (!timestamp) return 'Unknown'
-  
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
-  const now = new Date()
-  const seconds = Math.floor((now - date) / 1000)
-  
-  if (seconds < 60) return 'Just now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`
-  if (seconds < 2592000) return `${Math.floor(seconds / 86400)} days ago`
-  
-  return date.toLocaleDateString()
-}
 </script>
 
 <style scoped>
 .artist-studio {
   min-height: 100vh;
   background: var(--bg-secondary);
+}
+
+/* No Profile State */
+.no-profile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-2xl);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  max-width: 500px;
+}
+
+.empty-icon {
+  font-size: 5rem;
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-lg);
+  opacity: 0.8;
+}
+
+.empty-state h2 {
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  font-size: 2rem;
+}
+
+.empty-state p {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.6;
+}
+
+.empty-state p:last-of-type {
+  margin-bottom: var(--spacing-xl);
 }
 
 /* Studio Header */
@@ -579,86 +464,6 @@ const formatRelativeTime = (timestamp) => {
   font-size: 0.9rem;
 }
 
-/* Activity List */
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-}
-
-.activity-icon {
-  width: 40px;
-  height: 40px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.activity-content {
-  flex: 1;
-}
-
-.activity-description {
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.activity-time {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  margin: 0;
-}
-
-.activity-amount {
-  color: var(--color-success);
-  font-weight: 600;
-}
-
-.empty-activity {
-  text-align: center;
-  padding: var(--spacing-xl);
-  color: var(--text-secondary);
-}
-
-/* Tracks Table */
-.tracks-table {
-  overflow-x: auto;
-}
-
-.tracks-table table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.tracks-table th {
-  text-align: left;
-  padding: var(--spacing-md);
-  border-bottom: 2px solid var(--border-primary);
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.tracks-table td {
-  padding: var(--spacing-md);
-  border-bottom: 1px solid var(--border-primary);
-  color: var(--text-primary);
-}
-
-.tracks-table tr:hover {
-  background: var(--bg-secondary);
-}
-
 /* Tips Card */
 .tips-card {
   background: linear-gradient(135deg, var(--color-primary), #764ba2);
@@ -683,33 +488,6 @@ const formatRelativeTime = (timestamp) => {
 .tips-card li {
   margin-bottom: var(--spacing-sm);
 }
-
-/* Empty State */
-.no-artist {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-}
-
-.empty-state {
-  text-align: center;
-  padding: var(--spacing-2xl);
-}
-
-.empty-icon {
-  font-size: 5rem;
-  color: var(--text-muted);
-  margin-bottom: var(--spacing-lg);
-  opacity: 0.5;
-}
-
-/* Utilities */
-.text-success { color: var(--color-success); }
-.text-danger { color: var(--color-danger); }
-.text-primary { color: var(--color-primary); }
-.text-info { color: var(--color-info); }
-.mt-md { margin-top: var(--spacing-md); }
 
 /* Loading */
 .loading-container {
@@ -749,6 +527,9 @@ const formatRelativeTime = (timestamp) => {
   margin-bottom: var(--spacing-lg);
 }
 
+/* Utilities */
+.mt-md { margin-top: var(--spacing-md); }
+
 /* Responsive */
 @media (max-width: 768px) {
   .studio-header {
@@ -771,14 +552,6 @@ const formatRelativeTime = (timestamp) => {
   
   .link-display code {
     word-break: break-all;
-  }
-  
-  .activity-item {
-    flex-wrap: wrap;
-  }
-  
-  .tracks-table {
-    font-size: 0.9rem;
   }
 }
 </style>

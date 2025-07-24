@@ -1,116 +1,3 @@
-<template>
-  <nav class="navbar">
-    <div class="navbar-container">
-      <!-- Logo/Brand -->
-      <router-link to="/" class="navbar-brand">
-        <font-awesome-icon :icon="['fas', 'music']" class="brand-icon" />
-        <span class="brand-text">4track</span>
-      </router-link>
-
-      <!-- Desktop Navigation -->
-      <div class="navbar-menu" :class="{ 'active': mobileMenuOpen }">
-        <div class="navbar-start">
-          <router-link to="/discover" class="navbar-item" @click="closeMobileMenu">
-            <font-awesome-icon :icon="['fas', 'search']" class="navbar-icon" />
-            <span>Discover</span>
-          </router-link>
-          
-          <router-link 
-            v-if="user" 
-            to="/collection" 
-            class="navbar-item" 
-            @click="closeMobileMenu"
-          >
-            <font-awesome-icon :icon="['fas', 'heart']" class="navbar-icon" />
-            <span>Collection</span>
-          </router-link>
-          
-          <router-link 
-            v-if="userIsArtist" 
-            to="/studio" 
-            class="navbar-item" 
-            @click="closeMobileMenu"
-          >
-            <font-awesome-icon :icon="['fas', 'music']" class="navbar-icon" />
-            <span>Studio</span>
-          </router-link>
-        </div>
-
-        <div class="navbar-end">
-          <template v-if="!user">
-            <router-link to="/login" class="navbar-item" @click="closeMobileMenu">
-              Log In
-            </router-link>
-            <router-link to="/signup" class="btn btn-primary btn-sm" @click="closeMobileMenu">
-              Sign Up Free
-            </router-link>
-          </template>
-          
-          <template v-else>
-            <!-- User Menu -->
-            <div class="navbar-dropdown" ref="userDropdown">
-              <button @click="toggleUserMenu" class="navbar-user-button">
-                <div class="user-avatar">
-                  <font-awesome-icon :icon="['fas', 'user']" />
-                </div>
-                <span class="user-name">{{ displayName }}</span>
-                <font-awesome-icon :icon="['fas', 'chevron-down']" class="dropdown-icon" />
-              </button>
-              
-              <div v-if="userMenuOpen" class="dropdown-menu">
-                <router-link 
-                  to="/profile" 
-                  class="dropdown-item"
-                  @click="closeUserMenu"
-                >
-                  <font-awesome-icon :icon="['fas', 'user']" class="dropdown-icon" />
-                  Profile
-                </router-link>
-                
-                <router-link 
-                  v-if="!userIsArtist"
-                  to="/artist/create" 
-                  class="dropdown-item"
-                  @click="closeUserMenu"
-                >
-                  <font-awesome-icon :icon="['fas', 'music']" class="dropdown-icon" />
-                  Become an Artist
-                </router-link>
-                
-                <router-link 
-                  v-if="userIsArtist && artistProfile"
-                  :to="`/artist/${artistProfile.id}/medley`" 
-                  class="dropdown-item"
-                  @click="closeUserMenu"
-                >
-                  <font-awesome-icon :icon="['fas', 'list']" class="dropdown-icon" />
-                  Manage Medley
-                </router-link>
-                
-                <div class="dropdown-divider"></div>
-                
-                <button @click="handleLogout" class="dropdown-item text-danger">
-                  <font-awesome-icon :icon="['fas', 'sign-out-alt']" class="dropdown-icon" />
-                  Log Out
-                </button>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- Mobile Menu Toggle -->
-      <button 
-        @click="toggleMobileMenu" 
-        class="navbar-toggle"
-        :aria-expanded="mobileMenuOpen"
-      >
-        <font-awesome-icon :icon="mobileMenuOpen ? ['fas', 'times'] : ['fas', 'bars']" />
-      </button>
-    </div>
-  </nav>
-</template>
-
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -135,14 +22,19 @@ const displayName = computed(() => {
   return 'User'
 })
 
-const userIsArtist = computed(() => {
-  return userData.value?.userType === 'artist' && artistProfile.value
+// Check if user is an artist (by user type, not profile)
+const isArtistUser = computed(() => {
+  return userData.value?.userType === 'artist'
+})
+
+// Check if user has created an artist profile
+const hasArtistProfile = computed(() => {
+  return !!artistProfile.value
 })
 
 // Methods
 const toggleMobileMenu = () => {
   mobileMenuOpen.value = !mobileMenuOpen.value
-  // Close user menu when opening mobile menu
   if (mobileMenuOpen.value) {
     userMenuOpen.value = false
   }
@@ -193,7 +85,7 @@ const loadUserData = async (firebaseUser) => {
         ...userSnapshot.docs[0].data()
       }
       
-      // If user is an artist, load their profile
+      // If user is an artist, check for artist profile
       if (userData.value.userType === 'artist') {
         const artistQuery = query(
           collection(db, 'artistProfiles'),
@@ -239,6 +131,129 @@ onMounted(() => {
   })
 })
 </script>
+
+<template>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <!-- Logo/Brand -->
+      <router-link to="/" class="navbar-brand">
+        <font-awesome-icon :icon="['fas', 'music']" class="brand-icon" />
+        <span class="brand-text">4track</span>
+      </router-link>
+
+      <!-- Desktop Navigation -->
+      <div class="navbar-menu" :class="{ 'active': mobileMenuOpen }">
+        <div class="navbar-start">
+          <router-link to="/discover" class="navbar-item" @click="closeMobileMenu">
+            <font-awesome-icon :icon="['fas', 'search']" class="navbar-icon" />
+            <span>Discover</span>
+          </router-link>
+          
+          <router-link 
+            v-if="user" 
+            to="/collection" 
+            class="navbar-item" 
+            @click="closeMobileMenu"
+          >
+            <font-awesome-icon :icon="['fas', 'heart']" class="navbar-icon" />
+            <span>Collection</span>
+          </router-link>
+          
+          <router-link 
+            v-if="isArtistUser" 
+            to="/studio" 
+            class="navbar-item" 
+            @click="closeMobileMenu"
+          >
+            <font-awesome-icon :icon="['fas', 'music']" class="navbar-icon" />
+            <span>Studio</span>
+          </router-link>
+        </div>
+
+        <div class="navbar-end">
+          <template v-if="!user">
+            <router-link to="/login" class="navbar-item" @click="closeMobileMenu">
+              Log In
+            </router-link>
+            <router-link to="/signup" class="btn btn-primary btn-sm" @click="closeMobileMenu">
+              Sign Up Free
+            </router-link>
+          </template>
+          
+          <template v-else>
+            <!-- User Menu -->
+            <div class="navbar-dropdown" ref="userDropdown">
+              <button @click="toggleUserMenu" class="navbar-user-button">
+                <div class="user-avatar">
+                  <font-awesome-icon :icon="['fas', 'user']" />
+                </div>
+                <span class="user-name">{{ displayName }}</span>
+                <font-awesome-icon :icon="['fas', 'chevron-down']" class="dropdown-icon" />
+              </button>
+              
+              <div v-if="userMenuOpen" class="dropdown-menu">
+                <router-link 
+                  to="/profile" 
+                  class="dropdown-item"
+                  @click="closeUserMenu"
+                >
+                  <font-awesome-icon :icon="['fas', 'user']" class="dropdown-icon" />
+                  Profile
+                </router-link>
+                
+                <router-link 
+                  v-if="!isArtistUser"
+                  to="/artist/create" 
+                  class="dropdown-item"
+                  @click="closeUserMenu"
+                >
+                  <font-awesome-icon :icon="['fas', 'music']" class="dropdown-icon" />
+                  Become an Artist
+                </router-link>
+                
+                <router-link 
+                  v-if="isArtistUser && !hasArtistProfile"
+                  to="/artist/create" 
+                  class="dropdown-item"
+                  @click="closeUserMenu"
+                >
+                  <font-awesome-icon :icon="['fas', 'plus']" class="dropdown-icon" />
+                  Create Artist Profile
+                </router-link>
+                
+                <router-link 
+                  v-if="isArtistUser && hasArtistProfile"
+                  :to="`/artist/${artistProfile.id}/medley`" 
+                  class="dropdown-item"
+                  @click="closeUserMenu"
+                >
+                  <font-awesome-icon :icon="['fas', 'list']" class="dropdown-icon" />
+                  Manage Medley
+                </router-link>
+                
+                <div class="dropdown-divider"></div>
+                
+                <button @click="handleLogout" class="dropdown-item text-danger">
+                  <font-awesome-icon :icon="['fas', 'sign-out-alt']" class="dropdown-icon" />
+                  Log Out
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Mobile Menu Toggle -->
+      <button 
+        @click="toggleMobileMenu" 
+        class="navbar-toggle"
+        :aria-expanded="mobileMenuOpen"
+      >
+        <font-awesome-icon :icon="mobileMenuOpen ? ['fas', 'times'] : ['fas', 'bars']" />
+      </button>
+    </div>
+  </nav>
+</template>
 
 <style scoped>
 .navbar {

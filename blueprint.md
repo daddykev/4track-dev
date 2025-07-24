@@ -159,6 +159,8 @@ fourtrack-os/
     advancedAnalytics: false,
     teamCollaboration: false
   },
+  emailVerified: boolean,
+  inviteCode: string | null,
   createdAt: timestamp,
   lastLogin: timestamp
 }
