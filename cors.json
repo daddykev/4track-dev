@@ -1,0 +1,13 @@
+[
+  {
+    "origin": ["https://4track.io", "http://localhost:5173", "http://localhost:3000"],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE", "OPTIONS"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": [
+      "Content-Type",
+      "Access-Control-Allow-Origin",
+      "x-goog-resumable",
+      "x-goog-meta-firebaseStorageDownloadTokens"
+    ]
+  }
+]
