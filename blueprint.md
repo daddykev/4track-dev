@@ -72,8 +72,8 @@ fourtrack-os/
 │   ├── views/                  # Page components
 │   │   ├── AdminArtists.vue    # Admin: Review artist applications
 │   │   ├── AdminUsers.vue      # Admin: User management dashboard
-│   │   ├── ArtistMedley.vue    # Medley management
 │   │   ├── ArtistRoster.vue    # Multi-artist management for admin/label/manager users
+│   │   ├── ArtistStudio.vue    # Combined artist dashboard and medley management
 │   │   ├── CreateArtist.vue    # Artist onboarding (requires verified email)
 │   │   ├── DiscoverPage.vue    # Music discover
 │   │   ├── HomePage.vue        # Landing page
@@ -112,8 +112,8 @@ fourtrack-os/
 
 ### For Artists
 1. **Artist Application** - Apply to become an artist with approval workflow
-2. **Artist Profile** - Basic profile with name, genre, bio, PayPal email (after approval)
-3. **Medley Manager** - Upload up to 4 tracks with custom artwork
+2. **Artist Studio** - Combined dashboard for profile management and medley creation
+3. **Medley Management** - Upload up to 4 tracks with custom artwork directly in the studio
 4. **Direct Payments** - 100% of sales go directly to artist's PayPal
 5. **Flexible Pricing** - Set prices from $0-10 per track
 6. **Download Control** - Choose stream-only or allow downloads
@@ -132,7 +132,7 @@ fourtrack-os/
 2. **Create Artists** - Add new artist profiles with Spotify integration
 3. **Hierarchical Access** - Manage multiple artists from one account
 4. **Role-Based Permissions** - Admin sees all, others see their artists
-5. **Quick Actions** - Navigate to medley management or public pages
+5. **Quick Actions** - Navigate to artist studios or public pages
 
 ### For Admins
 1. **User Management** - View all users and their roles
@@ -326,6 +326,15 @@ Centralized permission checking for role-based access control:
 - **Purchasing Tracks**: No verification required
 - **Saving Tracks**: No verification required
 
+### ArtistStudio
+Enhanced artist dashboard combining profile and medley management:
+- View real-time statistics (plays, hearts, downloads, revenue)
+- Manage up to 4 medley tracks with drag-and-drop interface
+- Upload audio files (up to 200MB) and artwork (up to 20MB)
+- Set track pricing ($0-10) and download permissions
+- Share public medley link
+- All-in-one interface at `/studio` route
+
 ### AdminUsers
 Admin dashboard for user management:
 - View all platform users
@@ -459,6 +468,7 @@ artistAccess: {
 - Application approval workflow prevents spam/abuse
 - PayPal email collected only when needed (paid tracks)
 - Admin routes protected by router navigation guards
-- **Artist roster access limited to admin, label, and manager users**
-- **Hierarchical permissions allow labels/managers to create and manage multiple artists**
+- **Artist Studio provides integrated medley management and analytics**
+- **Single destination at `/studio` for all artist needs**
+- **Hierarchical permissions allow labels/managers to access artist studios**
 - **Spotify integration available during artist creation for metadata import**
