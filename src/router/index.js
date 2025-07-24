@@ -15,6 +15,8 @@ import MedleyPage from '../views/MedleyPage.vue'
 import MedleySuccess from '../views/MedleySuccess.vue'
 import ArtistStudio from '../views/ArtistStudio.vue'
 import ArtistMedley from '../views/ArtistMedley.vue'
+import AdminUsers from '../views/AdminUsers.vue'
+import AdminArtists from '../views/AdminArtists.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -85,6 +87,18 @@ const router = createRouter({
       component: MedleySuccess,
       meta: { title: 'Purchase Complete - 4track' }
     },
+    {
+      path: '/admin/users',
+      name: 'admin-users',
+      component: AdminUsers,
+      meta: { title: 'Manage Users - 4track Admin', requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/admin/artists',
+      name: 'admin-artists',
+      component: AdminArtists,
+      meta: { title: 'Artist Applications - 4track Admin', requiresAuth: true, requiresAdmin: true }
+    },
     // Catch-all route for 404s
     {
       path: '/:pathMatch(.*)*',
@@ -147,6 +161,9 @@ router.beforeEach(async (to, from, next) => {
     } else if (to.meta.requiresArtist && userData?.userType !== 'artist') {
       // If route requires artist and user is not an artist, redirect to create artist
       next({ name: 'create-artist' })
+    } else if (to.meta.requiresAdmin && userData?.userType !== 'admin') {
+      // If route requires admin and user is not an admin, redirect to home
+      next({ name: 'home' })
     } else {
       next()
     }

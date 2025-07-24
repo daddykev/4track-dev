@@ -1,11 +1,11 @@
 <template>
   <div class="create-artist-page">
     <div class="page-container">
-      <h1 class="page-title">Become an Artist</h1>
-      <p class="page-subtitle">Start sharing your music with the world</p>
+      <h1 class="page-title">Apply to Become an Artist</h1>
+      <p class="page-subtitle">Submit your application to start sharing your music</p>
 
       <div class="form-card">
-        <form @submit.prevent="createArtistProfile">
+        <form @submit.prevent="submitApplication">
           <div class="form-group">
             <label class="form-label">Artist Name *</label>
             <input
@@ -26,24 +26,23 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">PayPal Email *</label>
-            <input
-              v-model="paypalEmail"
-              type="email"
+            <label class="form-label">Why do you want to join 4track?</label>
+            <textarea
+              v-model="applicationReason"
               class="form-input"
-              placeholder="your-paypal@email.com"
+              rows="4"
+              placeholder="Tell us about your music and why you'd like to join..."
               required
-            />
-            <p class="form-hint">This is where you'll receive payments for track sales</p>
+            ></textarea>
           </div>
 
           <div class="form-group">
-            <label class="form-label">About You (Optional)</label>
+            <label class="form-label">About Your Music (Optional)</label>
             <textarea
               v-model="bio"
               class="form-input"
               rows="4"
-              placeholder="Tell fans about your music..."
+              placeholder="This will be your artist bio if approved..."
             ></textarea>
           </div>
 
@@ -51,36 +50,41 @@
             {{ error }}
           </div>
 
+          <div v-if="success" class="success-message">
+            <font-awesome-icon :icon="['fas', 'check-circle']" class="mr-sm" />
+            Application submitted! We'll review it and get back to you soon.
+          </div>
+
           <div class="form-actions">
-            <router-link to="/studio" class="btn btn-secondary">
+            <router-link to="/" class="btn btn-secondary">
               Cancel
             </router-link>
-            <button type="submit" class="btn btn-primary" :disabled="loading">
+            <button type="submit" class="btn btn-primary" :disabled="loading || success">
               <font-awesome-icon v-if="loading" :icon="['fas', 'spinner']" class="fa-spin mr-sm" />
-              {{ loading ? 'Creating...' : 'Create Artist Profile' }}
+              {{ loading ? 'Submitting...' : 'Submit Application' }}
             </button>
           </div>
         </form>
       </div>
 
       <div class="info-section">
-        <h3>What you get with 4track:</h3>
+        <h3>What happens next?</h3>
         <ul class="feature-list">
           <li>
             <font-awesome-icon :icon="['fas', 'check']" class="check-icon" />
-            Upload up to 4 tracks to your medley
+            We'll review your application within 24-48 hours
           </li>
           <li>
             <font-awesome-icon :icon="['fas', 'check']" class="check-icon" />
-            100% of sales go directly to your PayPal
+            You'll receive an email when your application is approved
           </li>
           <li>
             <font-awesome-icon :icon="['fas', 'check']" class="check-icon" />
-            Basic analytics (plays, hearts, revenue)
+            Once approved, you can set up your artist profile
           </li>
           <li>
             <font-awesome-icon :icon="['fas', 'check']" class="check-icon" />
-            Share your medley with a simple link
+            Start uploading tracks and earning 100% of sales
           </li>
         </ul>
       </div>
@@ -93,16 +97,16 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
 import { doc, setDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
-import { authService } from '@/services/auth'
-import { validateArtistName, validatePayPalEmail, formatSlug } from '@/utils/validators'
+import { validateArtistName } from '@/utils/validators'
 
 const router = useRouter()
 
 const artistName = ref('')
 const genre = ref('')
-const paypalEmail = ref('')
+const applicationReason = ref('')
 const bio = ref('')
 const error = ref('')
+const success = ref(false)
 const loading = ref(false)
 
 const genres = [
@@ -111,14 +115,14 @@ const genres = [
   'Metal', 'Folk', 'Reggae', 'Blues', 'Soul'
 ]
 
-const createArtistProfile = async () => {
+const submitApplication = async () => {
   loading.value = true
   error.value = ''
   
   try {
     const user = auth.currentUser
     if (!user) {
-      throw new Error('You must be logged in to create an artist profile')
+      throw new Error('You must be logged in to apply')
     }
     
     // Validate inputs
@@ -127,9 +131,16 @@ const createArtistProfile = async () => {
       throw new Error(nameValidation.error)
     }
     
-    const emailValidation = validatePayPalEmail(paypalEmail.value)
-    if (!emailValidation.isValid) {
-      throw new Error(emailValidation.error)
+    // Check if user already has an application
+    const existingQuery = query(
+      collection(db, 'artistApplications'),
+      where('userId', '==', user.uid),
+      where('status', 'in', ['pending', 'approved'])
+    )
+    const existingSnapshot = await getDocs(existingQuery)
+    
+    if (!existingSnapshot.empty) {
+      throw new Error('You already have an active application')
     }
     
     // Check if artist name is taken
@@ -143,41 +154,31 @@ const createArtistProfile = async () => {
       throw new Error('This artist name is already taken')
     }
     
-    // Generate slug
-    const customSlug = formatSlug(artistName.value)
-    
-    // Check if slug is taken
-    const slugQuery = query(
-      collection(db, 'artistProfiles'),
-      where('customSlug', '==', customSlug)
-    )
-    const slugSnapshot = await getDocs(slugQuery)
-    
-    if (!slugSnapshot.empty) {
-      throw new Error('This artist name generates a URL that is already in use')
-    }
-    
-    // Create artist profile
-    const artistId = doc(collection(db, 'artistProfiles')).id
-    await setDoc(doc(db, 'artistProfiles', artistId), {
-      name: artistName.value,
+    // Create application
+    const applicationId = doc(collection(db, 'artistApplications')).id
+    await setDoc(doc(db, 'artistApplications', applicationId), {
+      userId: user.uid,
+      userEmail: user.email,
+      displayName: user.displayName || user.email.split('@')[0],
+      artistName: artistName.value,
       genre: genre.value || null,
-      paypalEmail: paypalEmail.value,
+      applicationReason: applicationReason.value,
       bio: bio.value || null,
-      createdBy: user.uid,
+      status: 'pending',
       createdAt: serverTimestamp(),
-      platform: '4track',
-      hasPublicMedley: false,
-      customSlug: customSlug
+      reviewedAt: null,
+      reviewedBy: null,
+      reviewNotes: null
     })
     
-    // Update user to artist
-    await authService.becomeArtist()
+    success.value = true
     
-    // Redirect to medley manager
-    router.push(`/artist/${artistId}/medley`)
+    // Redirect after 3 seconds
+    setTimeout(() => {
+      router.push('/profile')
+    }, 3000)
   } catch (err) {
-    error.value = err.message || 'Failed to create artist profile'
+    error.value = err.message || 'Failed to submit application'
   } finally {
     loading.value = false
   }
@@ -185,91 +186,18 @@ const createArtistProfile = async () => {
 </script>
 
 <style scoped>
-.create-artist-page {
-  min-height: 100vh;
-  background: var(--bg-secondary);
-  padding: var(--spacing-xl);
-}
+/* Previous styles remain the same, just add: */
 
-.page-title {
-  font-size: 2.5rem;
-  text-align: center;
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-sm);
-}
-
-.page-subtitle {
-  text-align: center;
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-  margin-bottom: var(--spacing-2xl);
-}
-
-.form-card {
-  background: var(--bg-card);
-  padding: var(--spacing-2xl);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  margin-bottom: var(--spacing-xl);
-}
-
-.form-actions {
-  display: flex;
-  gap: var(--spacing-md);
-  justify-content: flex-end;
-  margin-top: var(--spacing-xl);
-}
-
-.info-section {
-  background: var(--bg-card);
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-.info-section h3 {
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-lg);
-}
-
-.feature-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.feature-list li {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
-  color: var(--text-secondary);
-}
-
-.check-icon {
+.success-message {
+  background: rgba(40, 167, 69, 0.1);
   color: var(--color-success);
-  margin-top: 2px;
-}
-
-.mr-sm {
-  margin-right: var(--spacing-sm);
-}
-
-.error-message {
-  background: rgba(220, 53, 69, 0.1);
-  color: var(--color-danger);
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   text-align: center;
   margin-top: var(--spacing-md);
-}
-
-.fa-spin {
-  animation: fa-spin 1s infinite linear;
-}
-
-@keyframes fa-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
 }
 </style>

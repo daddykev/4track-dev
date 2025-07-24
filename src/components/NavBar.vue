@@ -28,6 +28,11 @@ const isArtistUser = computed(() => {
   return userData.value?.userType === 'artist'
 })
 
+// Check if user is admin
+const isAdmin = computed(() => {
+  return userData.value?.userType === 'admin'
+})
+
 // Check if user has created an artist profile
 const hasArtistProfile = computed(() => {
   return !!artistProfile.value
@@ -145,12 +150,7 @@ onMounted(() => {
       <!-- Desktop Navigation -->
       <div class="navbar-menu" :class="{ 'active': mobileMenuOpen }">
         <div class="navbar-start">
-          <router-link 
-            v-if="user"
-            to="/discover" 
-            class="navbar-item" 
-            @click="closeMobileMenu"
-          >
+          <router-link to="/discover" class="navbar-item" @click="closeMobileMenu">
             <font-awesome-icon :icon="['fas', 'search']" class="navbar-icon" />
             <span>Discover</span>
           </router-link>
@@ -214,7 +214,7 @@ onMounted(() => {
                   @click="closeUserMenu"
                 >
                   <font-awesome-icon :icon="['fas', 'music']" class="dropdown-icon" />
-                  Become an Artist
+                  Apply to be an Artist
                 </router-link>
                 
                 <router-link 
@@ -236,6 +236,31 @@ onMounted(() => {
                   <font-awesome-icon :icon="['fas', 'list']" class="dropdown-icon" />
                   Manage Medley
                 </router-link>
+                
+                <!-- Admin section -->
+                <template v-if="isAdmin">
+                  <div class="dropdown-divider"></div>
+                  
+                  <div class="dropdown-label">Admin Tools</div>
+                  
+                  <router-link 
+                    to="/admin/users" 
+                    class="dropdown-item"
+                    @click="closeUserMenu"
+                  >
+                    <font-awesome-icon :icon="['fas', 'users']" class="dropdown-icon" />
+                    Manage Users
+                  </router-link>
+                  
+                  <router-link 
+                    to="/admin/artists" 
+                    class="dropdown-item"
+                    @click="closeUserMenu"
+                  >
+                    <font-awesome-icon :icon="['fas', 'music']" class="dropdown-icon" />
+                    Artist Applications
+                  </router-link>
+                </template>
                 
                 <div class="dropdown-divider"></div>
                 
@@ -481,6 +506,15 @@ onMounted(() => {
 
 .navbar-toggle:hover {
   background: var(--bg-hover);
+}
+
+.dropdown-label {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
 }
 
 /* Mobile Styles */
