@@ -303,3 +303,82 @@ Reusable component that displays when user's email is not verified:
 - Privacy-focused event tracking
 - No personal data storage
 - Geographic aggregation only
+
+## User Types & Access Control
+
+### User Types (userType field)
+
+1. **consumer** (default)
+   - Can discover and purchase music
+   - Build personal music collection
+   - Save tracks to favorites
+   - No artist management capabilities
+
+2. **artist**
+   - All consumer features included
+   - Create and manage one artist profile
+   - Upload medley tracks (up to 4)
+   - Set pricing and PayPal integration
+   - View basic analytics
+   - Requires email verification
+
+3. **label**
+   - All consumer features included
+   - Hierarchical access to multiple artists
+   - Manage artist roster
+   - View aggregated analytics across artists
+   - Bulk operations for catalog management
+   - Requires admin approval or special invite code
+
+4. **manager**
+   - All consumer features included
+   - Hierarchical access to assigned artists
+   - Cannot create new artists (must be granted access)
+   - View analytics for managed artists
+   - Assist with medley and profile management
+   - Requires artist invitation
+
+5. **admin**
+   - Full platform access
+   - All features from other user types
+   - User management capabilities
+   - Platform configuration
+   - Analytics across entire platform
+   - Invite code generation
+
+### Hierarchical Access System
+
+Label and manager accounts can manage multiple artists through a permission-based system:
+
+```
+// Example artist access structure
+artistAccess: {
+  artistId: {
+    role: 'owner' | 'manager' | 'label',
+    permissions: ['edit', 'analytics', 'revenue'],
+    grantedBy: 'userId',
+    grantedAt: timestamp
+  }
+}
+```
+
+### Features by User Type
+```
+| Feature          | Consumer | Artist  | Label      | Manager    | Admin  |
+|------------------|----------|---------|------------|------------|--------|
+| Music Collection | ✓        | ✓       | ✓          | ✓          | ✓      |
+| Purchase Tracks  | ✓        | ✓       | ✓          | ✓          | ✓      |
+| Create Artist.   | ✗        | ✓ (1)   | ✓ (∞)      | ✗          | ✓      |
+| Manage Artists   | ✗        | ✓ (own) | ✓ (roster) | ✓ (shared) | ✓      |
+| View Analytics   | ✗        | ✓ (own) | ✓ (all)    | ✓ (shared) | ✓      |
+| Bulk Operations  | ✗        | ✗       | ✓          | ✗          | ✓      |
+| Platform Admin   | ✗        | ✗       | ✗          | ✗          | ✓      |
+```
+
+### Implementation Notes
+
+- User type is stored in the `userType` field in the users collection
+- Label and manager accounts maintain full consumer functionality
+- Access to artists is managed through a separate permissions system
+- Email verification required for elevated permissions
+- Special invite codes can pre-assign user types during signup
