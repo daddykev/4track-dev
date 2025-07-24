@@ -70,6 +70,8 @@ fourtrack-os/
 │   │   └── validators.js       # Input validation utilities
 │   │
 │   ├── views/                  # Page components
+│   │   ├── AdminArtists.vue    # Admin: Review artist applications
+│   │   ├── AdminUsers.vue      # Admin: User management dashboard
 │   │   ├── ArtistMedley.vue    # Medley management
 │   │   ├── CreateArtist.vue    # Artist onboarding (requires verified email)
 │   │   ├── DiscoverPage.vue    # Music discover
@@ -108,13 +110,14 @@ fourtrack-os/
 ## Core Features
 
 ### For Artists
-1. **Artist Profile** - Basic profile with name, genre, bio, PayPal email (requires verified email)
-2. **Medley Manager** - Upload up to 4 tracks with custom artwork
-3. **Direct Payments** - 100% of sales go directly to artist's PayPal
-4. **Flexible Pricing** - Set prices from $0-10 per track
-5. **Download Control** - Choose stream-only or allow downloads
-6. **Public Link** - Share medley at `4track.io/artistname`
-7. **Basic Analytics** - Track plays, hearts, and revenue
+1. **Artist Application** - Apply to become an artist with approval workflow
+2. **Artist Profile** - Basic profile with name, genre, bio, PayPal email (after approval)
+3. **Medley Manager** - Upload up to 4 tracks with custom artwork
+4. **Direct Payments** - 100% of sales go directly to artist's PayPal
+5. **Flexible Pricing** - Set prices from $0-10 per track
+6. **Download Control** - Choose stream-only or allow downloads
+7. **Public Link** - Share medley at `4track.io/artistname`
+8. **Basic Analytics** - Track plays, hearts, and revenue
 
 ### For Fans
 1. **Discover Music** - Browse artists by genre
@@ -123,12 +126,19 @@ fourtrack-os/
 4. **Download Library** - Access purchased tracks anytime
 5. **Heart Tracks** - Save favorites for later purchase
 
+### For Admins
+1. **User Management** - View all users and their roles
+2. **Application Review** - Approve/deny artist applications
+3. **Platform Stats** - Monitor user growth and activity
+4. **Access Control** - Admin-only routes and features
+
 ### Authentication & Security
 1. **Email Verification** - Required for all email/password signups
 2. **Google Sign-In** - Pre-verified authentication option
 3. **Invite Codes** - Special access for early artists (FIRSTWAVE)
 4. **Secure Sessions** - JWT-based authentication
 5. **Privacy First** - Minimal data collection
+6. **Role-Based Access** - Consumer, Artist, and Admin roles
 
 ### Privacy & Security
 1. **No Cookies** - Zero tracking cookies
@@ -165,6 +175,25 @@ fourtrack-os/
   inviteCode: string | null,
   createdAt: timestamp,
   lastLogin: timestamp
+}
+```
+
+#### artistApplications
+```
+{
+  userId: string,
+  userEmail: string,
+  displayName: string,
+  artistName: string,
+  genre: string | null,
+  applicationReason: string,
+  bio: string | null,
+  status: 'pending' | 'approved' | 'denied',
+  createdAt: timestamp,
+  reviewedAt: timestamp | null,
+  reviewedBy: string | null, // Admin user ID
+  reviewNotes: string | null, // Optional denial reason
+  artistProfileId: string | null // Set when approved
 }
 ```
 
@@ -245,12 +274,25 @@ fourtrack-os/
 ### Email/Password Signup
 1. User enters display name, email, and password
 2. Optional: Enter invite code (FIRSTWAVE for artist access)
-3. Account created with `emailVerified: false`
+3. Account created with `emailVerified: false`, `userType: 'consumer'`
 4. Verification email sent automatically
 5. User sees confirmation page with resend option
 6. User clicks verification link in email
 7. Email verified status updated in Firebase Auth and Firestore
 8. Full access granted to platform features
+
+### Artist Application Flow
+1. Consumer users apply to become artists via CreateArtist.vue
+2. Application submitted with artist name, genre, reason, and bio
+3. Application stored in `artistApplications` collection with `status: 'pending'`
+4. Admin users review applications in AdminArtists.vue
+5. On approval:
+   - User's `userType` updated to 'artist'
+   - Artist profile created in `artistProfiles`
+   - User can now access artist features
+6. On denial:
+   - Application marked as 'denied' with optional reason
+   - User remains a consumer
 
 ### Google Sign-In
 1. User clicks "Continue with Google"
@@ -259,20 +301,26 @@ fourtrack-os/
 4. Immediate access to all features
 
 ### Email Verification Requirements
-- **Creating Artist Profile**: Requires verified email
+- **Creating Artist Profile**: Requires verified email (via application)
 - **Uploading Tracks**: Requires verified email
 - **Purchasing Tracks**: No verification required
 - **Saving Tracks**: No verification required
 
-## Components
+### AdminUsers
+Admin dashboard for user management:
+- View all platform users
+- Filter by name, email, or type
+- See user statistics (total, consumers, artists, admins)
+- Check email verification status
+- Monitor user growth
 
-### EmailVerificationBanner
-Reusable component that displays when user's email is not verified:
-- Shows warning message with icon
-- Resend verification email button
-- 60-second cooldown between resends
-- Auto-hides when email is verified
-- Responsive design for mobile
+### AdminArtists
+Admin interface for artist application review:
+- Tabbed view (Pending, Approved, Denied)
+- Review application details and reasons
+- One-click approve/deny actions
+- Automatic artist profile creation on approval
+- Optional denial notes
 
 ## Security Rules
 
@@ -380,7 +428,7 @@ artistAccess: {
 ### Implementation Notes
 
 - User type is stored in the `userType` field in the users collection
-- Label and manager accounts maintain full consumer functionality
-- Access to artists is managed through a separate permissions system
-- Email verification required for elevated permissions
-- Special invite codes can pre-assign user types during signup
+- Email verification required for artist features
+- Application approval workflow prevents spam/abuse
+- PayPal email collected only when needed (paid tracks)
+- Admin routes protected by router navigation guards
