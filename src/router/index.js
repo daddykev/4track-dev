@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { auth } from '@/firebase'
+import { auth, db } from '@/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
+import { collection, query, where, getDocs } from 'firebase/firestore'
 
 // 4track.io specific views
 import HomePage from '../views/HomePage.vue'
@@ -105,9 +106,6 @@ onAuthStateChanged(auth, async (user) => {
   // Load user data if authenticated
   if (user) {
     try {
-      const { collection, query, where, getDocs } = await import('firebase/firestore')
-      const { db } = await import('@/firebase')
-      
       const userQuery = query(
         collection(db, 'users'),
         where('uid', '==', user.uid)

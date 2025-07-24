@@ -14,14 +14,14 @@ export function useTheme() {
 
   const meterColors = computed(() => ({
     peak: {
-      low: { color: '#4caf50' },
-      middle: { color: '#ff9800', threshold: -12 },
-      top: { color: '#f44336', threshold: -3 }
+      top: { threshold: -2, color: isDarkTheme.value ? '#e5402b' : '#e5402b' },
+      middle: { threshold: -6, color: isDarkTheme.value ? '#d3d65d' : '#d3d65d' },
+      low: { color: isDarkTheme.value ? '#7fbdf8' : '#7fbdf8' }
     },
     rms: {
-      low: { color: '#2196f3' },
-      middle: { color: '#00bcd4', threshold: -20 },
-      top: { color: '#4caf50', threshold: -12 }
+      top: { threshold: -16, color: isDarkTheme.value ? '#8b2112' : '#a02814' },
+      middle: { threshold: -20, color: isDarkTheme.value ? '#999b30' : '#999b30' },
+      low: { color: isDarkTheme.value ? '#36538a' : '#36538a' }
     }
   }))
 

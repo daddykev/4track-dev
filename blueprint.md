@@ -19,7 +19,7 @@
 - **Build Tool**: Vite
 - **Routing**: Vue Router
 - **Styling**: CSS with utility-first architecture
-- **Icons**: FontAwesome
+- **Icons**: FontAwesome 7
 - **Audio**: HTML5 Audio for playback, Web Audio API for visualizations
 
 ### Backend
@@ -63,6 +63,7 @@ fourtrack-os/
 │   │   └── auth.js             # Authentication service with email verification
 │   │
 │   ├── utils/                  # Utility functions
+│   │   ├── fontawesome.js      # FontAwesome configuration
 │   │   ├── formatters.js       # Data formatting utilities
 │   │   └── validators.js       # Input validation utilities
 │   │
@@ -84,7 +85,6 @@ fourtrack-os/
 │
 ├── functions/                  # Cloud Functions
 │   ├── index.js                # Function exports
-│   ├── authFunctions.js        # User authentication
 │   ├── medleyFunctions.js      # PayPal & medley logic
 │   └── analyticsFunctions.js   # Privacy-focused analytics
 │
