@@ -80,7 +80,7 @@ class AuthService {
   }
 
   // Sign up with email and password
-  async signUp(email, password, displayName = null) {
+  async signUp(email, password, displayName = null, inviteCode = null) {
     try {
       // Create Firebase auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
@@ -91,12 +91,15 @@ class AuthService {
         await updateProfile(user, { displayName })
       }
       
+      // Determine user type based on invite code
+      const userType = inviteCode === 'FIRSTWAVE' ? 'artist' : 'consumer'
+      
       // Create user document in Firestore
       const userData = {
         uid: user.uid,
         email: user.email,
         displayName: displayName || email.split('@')[0],
-        userType: 'consumer', // Default to consumer
+        userType, // Set based on invite code
         platform: '4track',
         subscription: {
           tier: 'free',
@@ -111,7 +114,9 @@ class AuthService {
           teamCollaboration: false
         },
         createdAt: serverTimestamp(),
-        lastLogin: serverTimestamp()
+        lastLogin: serverTimestamp(),
+        // Store if they used the special invite code
+        inviteCode: inviteCode === 'FIRSTWAVE' ? 'FIRSTWAVE' : null
       }
       
       await setDoc(doc(db, 'users', user.uid), userData)

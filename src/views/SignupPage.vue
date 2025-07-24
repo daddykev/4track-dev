@@ -44,6 +44,24 @@
             <p class="form-hint">At least 6 characters</p>
           </div>
 
+          <div class="form-group">
+            <label for="inviteCode" class="form-label">
+              Invite Code 
+              <span class="text-muted font-sm">(optional)</span>
+            </label>
+            <input
+              id="inviteCode"
+              v-model="inviteCode"
+              type="text"
+              class="form-input"
+              placeholder="Enter invite code"
+            />
+            <p v-if="inviteCode === 'FIRSTWAVE'" class="form-hint text-success">
+              <font-awesome-icon :icon="['fas', 'check-circle']" class="mr-xs" />
+              Artist account will be created
+            </p>
+          </div>
+
           <label class="checkbox-label">
             <input v-model="agreeToTerms" type="checkbox" required />
             <span>
@@ -92,6 +110,7 @@ const router = useRouter()
 const displayName = ref('')
 const email = ref('')
 const password = ref('')
+const inviteCode = ref('')
 const agreeToTerms = ref(false)
 const error = ref('')
 const loading = ref(false)
@@ -101,7 +120,7 @@ const handleSignup = async () => {
   error.value = ''
   
   try {
-    await authService.signUp(email.value, password.value, displayName.value)
+    await authService.signUp(email.value, password.value, displayName.value, inviteCode.value)
     router.push('/collection')
   } catch (err) {
     error.value = err.message || 'Failed to create account'
@@ -126,7 +145,7 @@ const handleGoogleSignup = async () => {
 </script>
 
 <style scoped>
-/* Same styles as LoginPage.vue */
+/* Same styles as before */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -171,6 +190,10 @@ const handleGoogleSignup = async () => {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin-top: var(--spacing-xs);
+}
+
+.form-hint.text-success {
+  color: var(--color-success);
 }
 
 .checkbox-label {
@@ -239,8 +262,12 @@ const handleGoogleSignup = async () => {
   width: 100%;
 }
 
-.mr-sm {
-  margin-right: var(--spacing-sm);
+.mr-xs {
+  margin-right: var(--spacing-xs);
+}
+
+.text-success {
+  color: var(--color-success);
 }
 
 .error-message {
