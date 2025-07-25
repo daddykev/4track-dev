@@ -24,6 +24,7 @@ import {
 import { apiService } from '@/services/api'
 import { validateAudioFile, validateImageFile, validateTrackMetadata } from '@/utils/validators'
 import { hasArtistAccess, getRoleLabel } from '@/utils/permissions'
+import PhotoLab from '@/components/PhotoLab.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -42,6 +43,10 @@ const stats = ref({
   totalRevenue: 0
 })
 const copied = ref(false)
+
+// PhotoLab state
+const showPhotoLab = ref(false)
+const photoLabPhoto = ref(null)
 
 // Modal state
 const showTrackModal = ref(false)
@@ -707,6 +712,32 @@ const copyLink = async () => {
     console.error('Failed to copy:', err)
   }
 }
+
+// PhotoLab methods
+const openPhotoLab = (photo) => {
+  photoLabPhoto.value = photo
+  showPhotoLab.value = true
+}
+
+const closePhotoLab = () => {
+  showPhotoLab.value = false
+  photoLabPhoto.value = null
+}
+
+const handleProcessedPhoto = async (processedImageData) => {
+  // Convert data URL to blob
+  try {
+    const response = await fetch(processedImageData)
+    const blob = await response.blob()
+    const file = new File([blob], `processed_${Date.now()}.jpg`, { type: 'image/jpeg' })
+    
+    await uploadPhoto(file)
+    closePhotoLab()
+  } catch (err) {
+    console.error('Error saving processed photo:', err)
+    alert('Failed to save processed photo')
+  }
+}
 </script>
 
 <template>
@@ -898,6 +929,13 @@ const copyLink = async () => {
                 @click="viewPhoto(photo)"
               />
               <div class="photo-actions">
+                <button 
+                  @click="openPhotoLab(photo)"
+                  class="btn-action"
+                  title="Edit photo"
+                >
+                  <font-awesome-icon :icon="['fas', 'wand-magic-sparkles']" />
+                </button>
                 <button 
                   v-if="!photo.isPrimary"
                   @click="setPrimaryPhoto(photo)"
@@ -1121,6 +1159,15 @@ const copyLink = async () => {
           </div>
         </div>
       </div>
+
+      <!-- Photo Lab Modal -->
+      <PhotoLab
+        v-if="showPhotoLab && photoLabPhoto"
+        :photo="photoLabPhoto"
+        @close="closePhotoLab"
+        @save="handleProcessedPhoto"
+      />
+
     </div>
   </div>
 </template>
