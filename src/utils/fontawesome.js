@@ -36,7 +36,8 @@ import {
   faLightbulb,
   faMicrophoneAlt,
   faCheck,
-  faExternalLinkAlt
+  faExternalLinkAlt,
+  faCamera
 } from '@fortawesome/free-solid-svg-icons'
 
 // Import brands
@@ -82,6 +83,7 @@ library.add(
   faMicrophoneAlt,
   faCheck,
   faExternalLinkAlt,
+  faCamera,
   // Brand icons
   faGoogle,
   faPaypal,

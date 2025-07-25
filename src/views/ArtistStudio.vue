@@ -1,314 +1,3 @@
-<template>
-  <div class="artist-studio">
-    <div class="page-container">
-      <!-- Loading State -->
-      <div v-if="loading" class="loading-container">
-        <div class="loading-spinner"></div>
-        <p>Loading studio...</p>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="error" class="error-container">
-        <p class="error-message">{{ error }}</p>
-        <router-link to="/discover" class="btn btn-primary">
-          Back to Discover
-        </router-link>
-      </div>
-
-      <!-- No Artist Profile Yet -->
-      <div v-else-if="!artist && isOwnStudio" class="no-profile">
-        <div class="empty-state">
-          <font-awesome-icon :icon="['fas', 'microphone-alt']" class="empty-icon" />
-          <h2>Set Up Your Artist Profile</h2>
-          <p>You're registered as an artist, but you haven't created your profile yet.</p>
-          <p>Create your profile to start uploading music and sharing with fans!</p>
-          <router-link to="/artist/create" class="btn btn-primary btn-lg">
-            <font-awesome-icon :icon="['fas', 'plus']" />
-            Create Artist Profile
-          </router-link>
-        </div>
-      </div>
-
-      <!-- Studio Content (when artist profile exists) -->
-      <div v-else>
-        <!-- Studio Header -->
-        <div class="studio-header">
-          <div class="artist-info">
-            <img 
-              v-if="artist.profileImageUrl" 
-              :src="artist.profileImageUrl" 
-              :alt="artist.name"
-              class="artist-avatar"
-            />
-            <div v-else class="artist-avatar-placeholder">
-              <font-awesome-icon :icon="['fas', 'music']" />
-            </div>
-            <div>
-              <h1>{{ artist.name }}'s Studio</h1>
-              <p class="artist-genre">{{ artist.genre || 'Independent Artist' }}</p>
-              <!-- Show viewing notice for label/manager/admin -->
-              <p v-if="!isOwnStudio" class="viewing-notice">
-                <font-awesome-icon :icon="['fas', 'eye']" />
-                Viewing as {{ getRoleLabel(userData?.userType) }}
-              </p>
-            </div>
-          </div>
-          <!-- Back button when viewing another artist's studio -->
-          <router-link v-if="!isOwnStudio" to="/roster" class="btn btn-secondary">
-            <font-awesome-icon :icon="['fas', 'arrow-left']" />
-            Back to Roster
-          </router-link>
-        </div>
-
-        <!-- Quick Stats -->
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon">
-              <font-awesome-icon :icon="['fas', 'play']" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ stats.totalPlays }}</div>
-              <div class="stat-label">Total Plays</div>
-            </div>
-          </div>
-          
-          <div class="stat-card">
-            <div class="stat-icon">
-              <font-awesome-icon :icon="['fas', 'heart']" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ stats.totalHearts }}</div>
-              <div class="stat-label">Hearts</div>
-            </div>
-          </div>
-          
-          <div class="stat-card">
-            <div class="stat-icon">
-              <font-awesome-icon :icon="['fas', 'download']" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ stats.totalDownloads }}</div>
-              <div class="stat-label">Downloads</div>
-            </div>
-          </div>
-          
-          <div class="stat-card">
-            <div class="stat-icon">
-              <font-awesome-icon :icon="['fas', 'dollar-sign']" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">${{ stats.totalRevenue.toFixed(2) }}</div>
-              <div class="stat-label">Total Revenue</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Track Management Section -->
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">
-              <font-awesome-icon :icon="['fas', 'music']" class="section-icon" />
-              Medley Tracks
-            </h2>
-          </div>
-          
-          <!-- Track Slots -->
-          <div class="track-slots">
-            <div 
-              v-for="(slot, index) in 4" 
-              :key="index"
-              class="track-slot"
-              :class="{ 'filled': tracks[index], 'empty': !tracks[index] }"
-            >
-              <!-- Filled Slot -->
-              <div v-if="tracks[index]" class="track-content">
-                <img 
-                  v-if="tracks[index].artworkUrl" 
-                  :src="tracks[index].artworkUrl" 
-                  :alt="tracks[index].title"
-                  class="track-artwork"
-                />
-                <div v-else class="artwork-placeholder">
-                  <font-awesome-icon :icon="['fas', 'music']" />
-                </div>
-                <div class="track-details">
-                  <h3>{{ tracks[index].title }}</h3>
-                  <p>${{ tracks[index].price.toFixed(2) }}</p>
-                </div>
-                <button 
-                  @click="editTrack(tracks[index])"
-                  class="btn-edit"
-                >
-                  <font-awesome-icon :icon="['fas', 'edit']" />
-                </button>
-                <button 
-                  @click="deleteTrack(tracks[index])"
-                  class="btn-delete"
-                >
-                  <font-awesome-icon :icon="['fas', 'trash']" />
-                </button>
-              </div>
-              
-              <!-- Empty Slot -->
-              <button 
-                v-else 
-                @click="addTrack(index)"
-                class="empty-slot-btn"
-              >
-                <font-awesome-icon :icon="['fas', 'plus']" />
-                <span>Add Track</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Public Link Section -->
-        <div v-if="artist.customSlug && artist.hasPublicMedley" class="section-card">
-          <h2>
-            <font-awesome-icon :icon="['fas', 'share']" />
-            Share Your Medley
-          </h2>
-          <div class="link-display">
-            <code>{{ publicUrl }}</code>
-            <button @click="copyLink" class="btn btn-secondary">
-              <font-awesome-icon :icon="['fas', 'copy']" />
-              {{ copied ? 'Copied!' : 'Copy' }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Getting Started Tips -->
-        <div v-if="!artist.hasPublicMedley" class="tips-card">
-          <h3>
-            <font-awesome-icon :icon="['fas', 'lightbulb']" />
-            Getting Started
-          </h3>
-          <ol>
-            <li>Upload your first track to create your medley</li>
-            <li>Add up to 4 tracks with custom artwork</li>
-            <li>Share your medley link with fans</li>
-            <li>Get paid directly via PayPal</li>
-          </ol>
-        </div>
-      </div>
-
-      <!-- Add/Edit Track Modal -->
-      <div v-if="showTrackModal" class="modal-overlay" @click="closeModal">
-        <div class="modal modal-lg" @click.stop>
-          <div class="modal-header">
-            <h3>
-              <font-awesome-icon :icon="editingTrack ? ['fas', 'edit'] : ['fas', 'plus']" />
-              {{ editingTrack ? 'Edit Track' : 'Add Track' }}
-            </h3>
-            <button @click="closeModal" class="close-btn">×</button>
-          </div>
-          
-          <div class="modal-content">
-            <form @submit.prevent="saveTrack">
-              <!-- Track Title -->
-              <div class="form-group">
-                <label class="form-label">Track Title *</label>
-                <input
-                  v-model="trackForm.title"
-                  type="text"
-                  class="form-input"
-                  placeholder="Enter track title"
-                  required
-                />
-              </div>
-
-              <!-- Track Description -->
-              <div class="form-group">
-                <label class="form-label">Description (Optional)</label>
-                <textarea
-                  v-model="trackForm.description"
-                  class="form-textarea"
-                  rows="3"
-                  placeholder="Brief description"
-                ></textarea>
-              </div>
-
-              <!-- Price and Download Settings -->
-              <div class="grid grid-2 gap-md">
-                <div class="form-group">
-                  <label class="form-label">Price ($)</label>
-                  <input
-                    v-model.number="trackForm.price"
-                    type="number"
-                    step="0.50"
-                    min="0"
-                    max="10"
-                    class="form-input"
-                  />
-                  <p class="form-hint">$0 = Free download, max $10</p>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Download Option</label>
-                  <label class="checkbox-label">
-                    <input
-                      v-model="trackForm.allowDownload"
-                      type="checkbox"
-                    />
-                    <span>Allow download after purchase</span>
-                  </label>
-                  <p class="form-hint">Unchecked = Stream only</p>
-                </div>
-              </div>
-
-              <!-- Audio File -->
-              <div class="form-group">
-                <label class="form-label">
-                  Audio File {{ editingTrack ? '(Leave empty to keep current)' : '*' }}
-                </label>
-                <input
-                  type="file"
-                  accept="audio/*"
-                  @change="handleAudioFileSelect"
-                  class="form-input"
-                  ref="audioFileInput"
-                />
-                <p class="form-hint">Maximum file size: 200MB</p>
-              </div>
-
-              <!-- Artwork File -->
-              <div class="form-group">
-                <label class="form-label">
-                  Artwork {{ editingTrack ? '(Leave empty to keep current)' : '*' }}
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  @change="handleArtworkFileSelect"
-                  class="form-input"
-                  ref="artworkFileInput"
-                />
-                <p class="form-hint">Maximum file size: 20MB</p>
-              </div>
-
-              <!-- Error Message -->
-              <div v-if="modalError" class="error-message">
-                {{ modalError }}
-              </div>
-
-              <!-- Form Actions -->
-              <div class="modal-footer">
-                <button type="button" @click="closeModal" class="btn btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" class="btn btn-primary" :disabled="saving">
-                  <font-awesome-icon v-if="saving" :icon="['fas', 'spinner']" class="fa-spin mr-sm" />
-                  {{ saving ? 'Saving...' : (editingTrack ? 'Save Changes' : 'Add Track') }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -344,6 +33,7 @@ const loading = ref(true)
 const error = ref('')
 const artist = ref(null)
 const tracks = ref([])
+const photos = ref([])
 const userData = ref(null)
 const stats = ref({
   totalPlays: 0,
@@ -359,9 +49,15 @@ const editingTrack = ref(null)
 const saving = ref(false)
 const modalError = ref('')
 
+// Photo state
+const uploadingPhoto = ref(false)
+const uploadProgress = ref(0)
+const viewingPhoto = ref(null)
+
 // Refs
 const audioFileInput = ref(null)
 const artworkFileInput = ref(null)
+const photoFileInput = ref(null)
 
 // Form state
 const trackForm = ref({
@@ -468,6 +164,9 @@ const loadArtistData = async () => {
     // Load tracks
     await loadTracks()
     
+    // Load photos
+    await loadPhotos()
+    
     // Load analytics
     await loadAnalytics()
     
@@ -496,6 +195,35 @@ const loadTracks = async () => {
     }))
   } catch (err) {
     console.error('Error loading tracks:', err)
+  }
+}
+
+const loadPhotos = async () => {
+  if (!artist.value) return
+  
+  try {
+    const photosQuery = query(
+      collection(db, 'artistPhotos'),
+      where('artistId', '==', artist.value.id),
+      orderBy('uploadedAt', 'desc')
+    )
+    
+    const photosSnapshot = await getDocs(photosQuery)
+    photos.value = photosSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+    
+    // Update artist profile image if we have a primary photo
+    const primaryPhoto = photos.value.find(p => p.isPrimary)
+    if (primaryPhoto && primaryPhoto.thumbnailUrl !== artist.value.profileImageUrl) {
+      await updateDoc(doc(db, 'artistProfiles', artist.value.id), {
+        profileImageUrl: primaryPhoto.thumbnailUrl
+      })
+      artist.value.profileImageUrl = primaryPhoto.thumbnailUrl
+    }
+  } catch (err) {
+    console.error('Error loading photos:', err)
   }
 }
 
@@ -533,6 +261,236 @@ const getHeartCount = async () => {
   }
 }
 
+// Photo Management Functions
+const selectPhotoFile = () => {
+  photoFileInput.value.click()
+}
+
+const handlePhotoFileSelect = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  const validation = validateImageFile(file, { maxSize: 20 * 1024 * 1024 })
+  if (!validation.isValid) {
+    alert(validation.error)
+    event.target.value = ''
+    return
+  }
+  
+  await uploadPhoto(file)
+  event.target.value = '' // Clear input
+}
+
+const uploadPhoto = async (file) => {
+  uploadingPhoto.value = true
+  uploadProgress.value = 0
+  
+  try {
+    const user = auth.currentUser
+    const timestamp = Date.now()
+    
+    // Extract image metadata
+    const metadata = await extractImageMetadata(file)
+    
+    // Upload original
+    const originalPath = `${user.uid}/artist-photos/${artist.value.id}/original_${timestamp}_${file.name}`
+    const originalRef = storageRef(storage, originalPath)
+    
+    const uploadTask = uploadBytesResumable(originalRef, file)
+    
+    uploadTask.on('state_changed',
+      (snapshot) => {
+        uploadProgress.value = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+      },
+      (error) => {
+        console.error('Upload error:', error)
+        uploadingPhoto.value = false
+        uploadProgress.value = 0
+        alert('Failed to upload photo')
+      },
+      async () => {
+        // Get original URL
+        const originalUrl = await getDownloadURL(uploadTask.snapshot.ref)
+        
+        // Create thumbnail
+        const thumbnailBlob = await createThumbnail(file, 1000, 0.85)
+        const thumbnailPath = `${user.uid}/artist-photos/${artist.value.id}/thumbnails/${timestamp}_thumb.webp`
+        const thumbnailRef = storageRef(storage, thumbnailPath)
+        
+        await uploadBytesResumable(thumbnailRef, thumbnailBlob).then(async (snapshot) => {
+          const thumbnailUrl = await getDownloadURL(snapshot.ref)
+          
+          // Save to Firestore
+          const photoData = {
+            artistId: artist.value.id,
+            originalUrl,
+            originalPath,
+            thumbnailUrl,
+            thumbnailPath,
+            fileName: file.name,
+            fileSize: file.size,
+            width: metadata.width,
+            height: metadata.height,
+            isPrimary: photos.value.length === 0, // First photo is primary
+            metadata: metadata.exif || {},
+            uploadedBy: user.uid,
+            uploadedAt: serverTimestamp()
+          }
+          
+          await addDoc(collection(db, 'artistPhotos'), photoData)
+          
+          // Reload photos
+          await loadPhotos()
+          
+          uploadingPhoto.value = false
+          uploadProgress.value = 0
+        })
+      }
+    )
+  } catch (err) {
+    console.error('Error uploading photo:', err)
+    uploadingPhoto.value = false
+    uploadProgress.value = 0
+    alert('Failed to upload photo')
+  }
+}
+
+const extractImageMetadata = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const metadata = {
+          width: img.width,
+          height: img.height,
+          exif: {} // Would need EXIF library to extract full EXIF data
+        }
+        resolve(metadata)
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+const createThumbnail = (file, maxSize, quality) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        
+        // Calculate new dimensions
+        let width = img.width
+        let height = img.height
+        
+        if (width > height) {
+          if (height > maxSize) {
+            width = (width / height) * maxSize
+            height = maxSize
+          }
+        } else {
+          if (width > maxSize) {
+            height = (height / width) * maxSize
+            width = maxSize
+          }
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        
+        // Draw and convert to WebP
+        ctx.drawImage(img, 0, 0, width, height)
+        canvas.toBlob(
+          (blob) => resolve(blob),
+          'image/webp',
+          quality
+        )
+      }
+      img.onerror = reject
+      img.src = e.target.result
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+const setPrimaryPhoto = async (photo) => {
+  try {
+    // Update all photos to not primary
+    const updates = photos.value.map(p => {
+      if (p.id === photo.id) {
+        return updateDoc(doc(db, 'artistPhotos', p.id), { isPrimary: true })
+      } else if (p.isPrimary) {
+        return updateDoc(doc(db, 'artistPhotos', p.id), { isPrimary: false })
+      }
+      return Promise.resolve()
+    })
+    
+    await Promise.all(updates)
+    
+    // Update artist profile image
+    await updateDoc(doc(db, 'artistProfiles', artist.value.id), {
+      profileImageUrl: photo.thumbnailUrl
+    })
+    
+    await loadPhotos()
+  } catch (err) {
+    console.error('Error setting primary photo:', err)
+    alert('Failed to set primary photo')
+  }
+}
+
+const deletePhoto = async (photo) => {
+  if (!confirm('Delete this photo?')) return
+  
+  try {
+    // Delete from Storage
+    await deleteObject(storageRef(storage, photo.originalPath))
+    await deleteObject(storageRef(storage, photo.thumbnailPath))
+    
+    // Delete from Firestore
+    await firestoreDeleteDoc(doc(db, 'artistPhotos', photo.id))
+    
+    // If this was primary, set the next photo as primary
+    if (photo.isPrimary && photos.value.length > 1) {
+      const nextPhoto = photos.value.find(p => p.id !== photo.id)
+      if (nextPhoto) {
+        await setPrimaryPhoto(nextPhoto)
+      }
+    }
+    
+    await loadPhotos()
+  } catch (err) {
+    console.error('Error deleting photo:', err)
+    alert('Failed to delete photo')
+  }
+}
+
+const viewPhoto = (photo) => {
+  viewingPhoto.value = photo
+}
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+const formatDate = (dateString) => {
+  try {
+    return new Date(dateString).toLocaleDateString()
+  } catch {
+    return dateString
+  }
+}
+
+// Track Management Functions (existing)
 const addTrack = (index) => {
   trackForm.value = {
     title: '',
@@ -750,6 +708,422 @@ const copyLink = async () => {
   }
 }
 </script>
+
+<template>
+  <div class="artist-studio">
+    <div class="page-container">
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Loading studio...</p>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="error-container">
+        <p class="error-message">{{ error }}</p>
+        <router-link to="/discover" class="btn btn-primary">
+          Back to Discover
+        </router-link>
+      </div>
+
+      <!-- No Artist Profile Yet -->
+      <div v-else-if="!artist && isOwnStudio" class="no-profile">
+        <div class="empty-state">
+          <font-awesome-icon :icon="['fas', 'microphone-alt']" class="empty-icon" />
+          <h2>Set Up Your Artist Profile</h2>
+          <p>You're registered as an artist, but you haven't created your profile yet.</p>
+          <p>Create your profile to start uploading music and sharing with fans!</p>
+          <router-link to="/artist/create" class="btn btn-primary btn-lg">
+            <font-awesome-icon :icon="['fas', 'plus']" />
+            Create Artist Profile
+          </router-link>
+        </div>
+      </div>
+
+      <!-- Studio Content (when artist profile exists) -->
+      <div v-else>
+        <!-- Studio Header -->
+        <div class="studio-header">
+          <div class="artist-info">
+            <img 
+              v-if="artist.profileImageUrl" 
+              :src="artist.profileImageUrl" 
+              :alt="artist.name"
+              class="artist-avatar"
+            />
+            <div v-else class="artist-avatar-placeholder">
+              <font-awesome-icon :icon="['fas', 'music']" />
+            </div>
+            <div>
+              <h1>{{ artist.name }}'s Studio</h1>
+              <p class="artist-genre">{{ artist.genre || 'Independent Artist' }}</p>
+              <!-- Show viewing notice for label/manager/admin -->
+              <p v-if="!isOwnStudio" class="viewing-notice">
+                <font-awesome-icon :icon="['fas', 'eye']" />
+                Viewing as {{ getRoleLabel(userData?.userType) }}
+              </p>
+            </div>
+          </div>
+          <!-- Back button when viewing another artist's studio -->
+          <router-link v-if="!isOwnStudio" to="/roster" class="btn btn-secondary">
+            <font-awesome-icon :icon="['fas', 'arrow-left']" />
+            Back to Roster
+          </router-link>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <font-awesome-icon :icon="['fas', 'play']" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ stats.totalPlays }}</div>
+              <div class="stat-label">Total Plays</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">
+              <font-awesome-icon :icon="['fas', 'heart']" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ stats.totalHearts }}</div>
+              <div class="stat-label">Hearts</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">
+              <font-awesome-icon :icon="['fas', 'download']" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ stats.totalDownloads }}</div>
+              <div class="stat-label">Downloads</div>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">
+              <font-awesome-icon :icon="['fas', 'dollar-sign']" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">${{ stats.totalRevenue.toFixed(2) }}</div>
+              <div class="stat-label">Total Revenue</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Track Management Section -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title">
+              <font-awesome-icon :icon="['fas', 'music']" class="section-icon" />
+              Medley Tracks
+            </h2>
+          </div>
+          
+          <!-- Track Slots -->
+          <div class="track-slots">
+            <div 
+              v-for="(slot, index) in 4" 
+              :key="index"
+              class="track-slot"
+              :class="{ 'filled': tracks[index], 'empty': !tracks[index] }"
+            >
+              <!-- Filled Slot -->
+              <div v-if="tracks[index]" class="track-content">
+                <img 
+                  v-if="tracks[index].artworkUrl" 
+                  :src="tracks[index].artworkUrl" 
+                  :alt="tracks[index].title"
+                  class="track-artwork"
+                />
+                <div v-else class="artwork-placeholder">
+                  <font-awesome-icon :icon="['fas', 'music']" />
+                </div>
+                <div class="track-details">
+                  <h3>{{ tracks[index].title }}</h3>
+                  <p>${{ tracks[index].price.toFixed(2) }}</p>
+                </div>
+                <button 
+                  @click="editTrack(tracks[index])"
+                  class="btn-edit"
+                >
+                  <font-awesome-icon :icon="['fas', 'edit']" />
+                </button>
+                <button 
+                  @click="deleteTrack(tracks[index])"
+                  class="btn-delete"
+                >
+                  <font-awesome-icon :icon="['fas', 'trash']" />
+                </button>
+              </div>
+              
+              <!-- Empty Slot -->
+              <button 
+                v-else 
+                @click="addTrack(index)"
+                class="empty-slot-btn"
+              >
+                <font-awesome-icon :icon="['fas', 'plus']" />
+                <span>Add Track</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Photo Management Section -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title">
+              <font-awesome-icon :icon="['fas', 'camera']" class="section-icon" />
+              Photos
+            </h2>
+          </div>
+          
+          <!-- Photo Grid -->
+          <div class="photo-grid">
+            <!-- Existing Photos -->
+            <div 
+              v-for="photo in photos" 
+              :key="photo.id"
+              class="photo-item"
+              :class="{ 'primary': photo.isPrimary }"
+            >
+              <img 
+                :src="photo.thumbnailUrl" 
+                :alt="`Artist photo ${photo.id}`"
+                class="photo-thumbnail"
+                @click="viewPhoto(photo)"
+              />
+              <div class="photo-actions">
+                <button 
+                  v-if="!photo.isPrimary"
+                  @click="setPrimaryPhoto(photo)"
+                  class="btn-action"
+                  title="Set as primary"
+                >
+                  <font-awesome-icon :icon="['fas', 'star']" />
+                </button>
+                <button 
+                  @click="deletePhoto(photo)"
+                  class="btn-action btn-delete"
+                  title="Delete photo"
+                >
+                  <font-awesome-icon :icon="['fas', 'trash']" />
+                </button>
+              </div>
+              <div v-if="photo.isPrimary" class="primary-badge">
+                <font-awesome-icon :icon="['fas', 'star']" />
+                Primary
+              </div>
+            </div>
+            
+            <!-- Add Photo Button -->
+            <button 
+              @click="selectPhotoFile"
+              class="add-photo-btn"
+              :disabled="uploadingPhoto"
+            >
+              <font-awesome-icon 
+                v-if="uploadingPhoto" 
+                :icon="['fas', 'spinner']" 
+                class="fa-spin" 
+              />
+              <font-awesome-icon 
+                v-else
+                :icon="['fas', 'plus']" 
+              />
+              <span>{{ uploadingPhoto ? 'Uploading...' : 'Add Photo' }}</span>
+            </button>
+            
+            <!-- Hidden File Input -->
+            <input
+              ref="photoFileInput"
+              type="file"
+              accept="image/*"
+              @change="handlePhotoFileSelect"
+              style="display: none"
+            />
+          </div>
+          
+          <!-- Upload Progress -->
+          <div v-if="uploadProgress > 0 && uploadProgress < 100" class="upload-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
+            </div>
+            <p class="text-muted text-center mt-sm">Uploading photo... {{ uploadProgress }}%</p>
+          </div>
+        </div>
+
+        <!-- Public Link Section -->
+        <div v-if="artist.customSlug && artist.hasPublicMedley" class="section-card">
+          <h2>
+            <font-awesome-icon :icon="['fas', 'share']" />
+            Share Your Medley
+          </h2>
+          <div class="link-display">
+            <code>{{ publicUrl }}</code>
+            <button @click="copyLink" class="btn btn-secondary">
+              <font-awesome-icon :icon="['fas', 'copy']" />
+              {{ copied ? 'Copied!' : 'Copy' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Getting Started Tips -->
+        <div v-if="!artist.hasPublicMedley" class="tips-card">
+          <h3>
+            <font-awesome-icon :icon="['fas', 'lightbulb']" />
+            Getting Started
+          </h3>
+          <ol>
+            <li>Upload your first track to create your medley</li>
+            <li>Add up to 4 tracks with custom artwork</li>
+            <li>Share your medley link with fans</li>
+            <li>Get paid directly via PayPal</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Add/Edit Track Modal -->
+      <div v-if="showTrackModal" class="modal-overlay" @click="closeModal">
+        <div class="modal modal-lg" @click.stop>
+          <div class="modal-header">
+            <h3>
+              <font-awesome-icon :icon="editingTrack ? ['fas', 'edit'] : ['fas', 'plus']" />
+              {{ editingTrack ? 'Edit Track' : 'Add Track' }}
+            </h3>
+            <button @click="closeModal" class="close-btn">×</button>
+          </div>
+          
+          <div class="modal-content">
+            <form @submit.prevent="saveTrack">
+              <!-- Track Title -->
+              <div class="form-group">
+                <label class="form-label">Track Title *</label>
+                <input
+                  v-model="trackForm.title"
+                  type="text"
+                  class="form-input"
+                  placeholder="Enter track title"
+                  required
+                />
+              </div>
+
+              <!-- Track Description -->
+              <div class="form-group">
+                <label class="form-label">Description (Optional)</label>
+                <textarea
+                  v-model="trackForm.description"
+                  class="form-textarea"
+                  rows="3"
+                  placeholder="Brief description"
+                ></textarea>
+              </div>
+
+              <!-- Price and Download Settings -->
+              <div class="grid grid-2 gap-md">
+                <div class="form-group">
+                  <label class="form-label">Price ($)</label>
+                  <input
+                    v-model.number="trackForm.price"
+                    type="number"
+                    step="0.50"
+                    min="0"
+                    max="10"
+                    class="form-input"
+                  />
+                  <p class="form-hint">$0 = Free download, max $10</p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Download Option</label>
+                  <label class="checkbox-label">
+                    <input
+                      v-model="trackForm.allowDownload"
+                      type="checkbox"
+                    />
+                    <span>Allow download after purchase</span>
+                  </label>
+                  <p class="form-hint">Unchecked = Stream only</p>
+                </div>
+              </div>
+
+              <!-- Audio File -->
+              <div class="form-group">
+                <label class="form-label">
+                  Audio File {{ editingTrack ? '(Leave empty to keep current)' : '*' }}
+                </label>
+                <input
+                  type="file"
+                  accept="audio/*"
+                  @change="handleAudioFileSelect"
+                  class="form-input"
+                  ref="audioFileInput"
+                />
+                <p class="form-hint">Maximum file size: 200MB</p>
+              </div>
+
+              <!-- Artwork File -->
+              <div class="form-group">
+                <label class="form-label">
+                  Artwork {{ editingTrack ? '(Leave empty to keep current)' : '*' }}
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="handleArtworkFileSelect"
+                  class="form-input"
+                  ref="artworkFileInput"
+                />
+                <p class="form-hint">Maximum file size: 20MB</p>
+              </div>
+
+              <!-- Error Message -->
+              <div v-if="modalError" class="error-message">
+                {{ modalError }}
+              </div>
+
+              <!-- Form Actions -->
+              <div class="modal-footer">
+                <button type="button" @click="closeModal" class="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" :disabled="saving">
+                  <font-awesome-icon v-if="saving" :icon="['fas', 'spinner']" class="fa-spin mr-sm" />
+                  {{ saving ? 'Saving...' : (editingTrack ? 'Save Changes' : 'Add Track') }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Photo Viewer Modal -->
+      <div v-if="viewingPhoto" class="modal-overlay" @click="viewingPhoto = null">
+        <div class="photo-viewer" @click.stop>
+          <button @click="viewingPhoto = null" class="close-btn">
+            <font-awesome-icon :icon="['fas', 'times']" />
+          </button>
+          <img 
+            :src="viewingPhoto.originalUrl" 
+            :alt="`Artist photo`"
+            class="photo-full"
+          />
+          <div class="photo-info">
+            <p><strong>Size:</strong> {{ formatFileSize(viewingPhoto.fileSize) }}</p>
+            <p><strong>Dimensions:</strong> {{ viewingPhoto.width }} × {{ viewingPhoto.height }}px</p>
+            <p v-if="viewingPhoto.metadata?.dateTime">
+              <strong>Taken:</strong> {{ formatDate(viewingPhoto.metadata.dateTime) }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .artist-studio {
@@ -1028,6 +1402,157 @@ const copyLink = async () => {
   background: var(--color-danger);
 }
 
+/* Photo Grid */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.photo-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+}
+
+.photo-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.photo-item.primary {
+  box-shadow: 0 0 0 3px var(--color-primary);
+}
+
+.photo-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.photo-actions {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  display: flex;
+  gap: var(--spacing-xs);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.photo-item:hover .photo-actions {
+  opacity: 1;
+}
+
+.btn-action {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.btn-action:hover {
+  transform: scale(1.1);
+  background: var(--color-primary);
+}
+
+.btn-action.btn-delete:hover {
+  background: var(--color-danger);
+}
+
+.primary-badge {
+  position: absolute;
+  bottom: var(--spacing-sm);
+  left: var(--spacing-sm);
+  background: var(--color-primary);
+  color: white;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.add-photo-btn {
+  aspect-ratio: 1;
+  background: transparent;
+  border: 3px dashed var(--border-primary);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  color: var(--text-secondary);
+}
+
+.add-photo-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--bg-hover);
+}
+
+.add-photo-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.add-photo-btn svg {
+  font-size: 2rem;
+}
+
+/* Upload Progress */
+.upload-progress {
+  margin-top: var(--spacing-lg);
+}
+
+/* Photo Viewer Modal */
+.photo-viewer {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.photo-full {
+  display: block;
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+}
+
+.photo-info {
+  padding: var(--spacing-lg);
+  background: var(--bg-secondary);
+}
+
+.photo-info p {
+  margin: 0 0 var(--spacing-xs) 0;
+  color: var(--text-secondary);
+}
+
+.photo-info strong {
+  color: var(--text-primary);
+}
+
 /* Section Cards */
 .section-card {
   background: var(--bg-card);
@@ -1148,9 +1673,12 @@ const copyLink = async () => {
 }
 
 /* Utilities */
+.mt-sm { margin-top: var(--spacing-sm); }
 .mt-md { margin-top: var(--spacing-md); }
 .mr-sm { margin-right: var(--spacing-sm); }
 .gap-md { gap: var(--spacing-md); }
+.text-center { text-align: center; }
+.text-muted { color: var(--text-muted); }
 
 /* Animations */
 .fa-spin {
@@ -1182,6 +1710,10 @@ const copyLink = async () => {
     grid-template-columns: 1fr;
   }
   
+  .photo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
   .link-display {
     flex-direction: column;
   }
@@ -1210,6 +1742,11 @@ const copyLink = async () => {
   
   .stat-value {
     font-size: 1.5rem;
+  }
+  
+  .photo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--spacing-md);
   }
 }
 </style>
