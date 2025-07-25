@@ -7,8 +7,6 @@
 
 > A free, open source music platform that enables independent artists to monetize their music directly with listeners through customizable audio players and direct PayPal integration.
 
-🎵 **[Live Demo](https://4track.io)** | 📚 **[Documentation](#documentation)** | 🚀 **[Getting Started](#getting-started)**
-
 ## ✨ Features
 
 ### 🎤 For Artists
@@ -220,23 +218,18 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## 🎯 Roadmap
 
-### Version 1.0 (Current)
-- ✅ Artist medley players
+### Version 0.5 (Current)
+- ✅ Artist audio players
 - ✅ Direct PayPal integration
 - ✅ Photo gallery with filters
 - ✅ Basic analytics
 - ✅ Email verification
 
-### Version 1.1 (Planned)
-- 🔄 Mobile app (React Native)
-- 🔄 Advanced audio player
-- 🔄 Artist collaboration tools
-- 🔄 Fan subscription system
+### Version 1.0 (Public Launch)
+- 🔄 iOS app (SwiftUI)
 - 🔄 API for third-party integrations
 
 ### Version 2.0 (Future)
-- 🔮 Streaming protocol integration
-- 🔮 NFT and blockchain features
 - 🔮 Advanced analytics dashboard
 - 🔮 Multi-language support
 - 🔮 Live streaming capabilities
