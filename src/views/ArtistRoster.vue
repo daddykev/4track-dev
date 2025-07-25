@@ -244,10 +244,17 @@ onMounted(() => {
           
           <div class="artist-actions">
             <router-link 
+              :to="`/studio/${artist.id}`" 
+              class="btn btn-sm btn-primary"
+            >
+              <font-awesome-icon :icon="['fas', 'music']" />
+              Studio
+            </router-link>
+            <router-link 
               :to="`/artist/${artist.id}/medley`" 
               class="btn btn-sm btn-outline"
             >
-              <font-awesome-icon :icon="['fas', 'music']" />
+              <font-awesome-icon :icon="['fas', 'edit']" />
               Manage
             </router-link>
             <button 

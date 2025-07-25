@@ -64,10 +64,10 @@ const router = createRouter({
       meta: { title: 'Become an Artist - 4track', requiresAuth: true }
     },
     {
-      path: '/studio',
+      path: '/studio/:artistId?',
       name: 'studio',
       component: ArtistStudio,
-      meta: { title: 'Artist Studio - 4track', requiresAuth: true, requiresArtist: true }
+      meta: { title: 'Artist Studio - 4track', requiresAuth: true }
     },
     {
       path: '/roster',

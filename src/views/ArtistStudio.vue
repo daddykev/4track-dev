@@ -4,7 +4,7 @@
       <!-- Loading State -->
       <div v-if="loading" class="loading-container">
         <div class="loading-spinner"></div>
-        <p>Loading your studio...</p>
+        <p>Loading studio...</p>
       </div>
 
       <!-- Error State -->
@@ -16,7 +16,7 @@
       </div>
 
       <!-- No Artist Profile Yet -->
-      <div v-else-if="!artist" class="no-profile">
+      <div v-else-if="!artist && isOwnStudio" class="no-profile">
         <div class="empty-state">
           <font-awesome-icon :icon="['fas', 'microphone-alt']" class="empty-icon" />
           <h2>Set Up Your Artist Profile</h2>
@@ -41,13 +41,23 @@
               class="artist-avatar"
             />
             <div v-else class="artist-avatar-placeholder">
-              <font-awesome-icon :icon="['fas', 'user-music']" />
+              <font-awesome-icon :icon="['fas', 'music']" />
             </div>
             <div>
               <h1>{{ artist.name }}'s Studio</h1>
               <p class="artist-genre">{{ artist.genre || 'Independent Artist' }}</p>
+              <!-- Show viewing notice for label/manager/admin -->
+              <p v-if="!isOwnStudio" class="viewing-notice">
+                <font-awesome-icon :icon="['fas', 'eye']" />
+                Viewing as {{ getRoleLabel(userData?.userType) }}
+              </p>
             </div>
           </div>
+          <!-- Back button when viewing another artist's studio -->
+          <router-link v-if="!isOwnStudio" to="/roster" class="btn btn-secondary">
+            <font-awesome-icon :icon="['fas', 'arrow-left']" />
+            Back to Roster
+          </router-link>
         </div>
 
         <!-- Quick Stats -->
@@ -301,7 +311,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { auth, db, storage } from '@/firebase'
 import { 
   collection, 
@@ -309,6 +319,7 @@ import {
   where, 
   getDocs, 
   doc,
+  getDoc,
   addDoc,
   updateDoc,
   deleteDoc as firestoreDeleteDoc,
@@ -323,14 +334,17 @@ import {
 } from 'firebase/storage'
 import { apiService } from '@/services/api'
 import { validateAudioFile, validateImageFile, validateTrackMetadata } from '@/utils/validators'
+import { hasArtistAccess, getRoleLabel } from '@/utils/permissions'
 
 const router = useRouter()
+const route = useRoute()
 
 // State
 const loading = ref(true)
 const error = ref('')
 const artist = ref(null)
 const tracks = ref([])
+const userData = ref(null)
 const stats = ref({
   totalPlays: 0,
   totalHearts: 0,
@@ -361,6 +375,11 @@ const trackForm = ref({
 })
 
 // Computed
+const isOwnStudio = computed(() => {
+  if (!userData.value || !artist.value) return false
+  return userData.value.uid === artist.value.createdBy
+})
+
 const publicUrl = computed(() => {
   if (!artist.value?.customSlug) return ''
   return `${window.location.origin}/${artist.value.customSlug}`
@@ -381,23 +400,69 @@ const loadArtistData = async () => {
       return
     }
     
-    // Find artist profile for current user
-    const artistQuery = query(
-      collection(db, 'artistProfiles'),
-      where('createdBy', '==', user.uid)
+    // Load user data
+    const userQuery = query(
+      collection(db, 'users'),
+      where('uid', '==', user.uid)
     )
+    const userSnapshot = await getDocs(userQuery)
     
-    const artistSnapshot = await getDocs(artistQuery)
-    
-    if (artistSnapshot.empty) {
-      // User is an artist but hasn't created a profile yet
-      loading.value = false
-      return
+    if (!userSnapshot.empty) {
+      userData.value = {
+        id: userSnapshot.docs[0].id,
+        ...userSnapshot.docs[0].data()
+      }
     }
     
-    artist.value = {
-      id: artistSnapshot.docs[0].id,
-      ...artistSnapshot.docs[0].data()
+    // Check if viewing specific artist's studio
+    const artistId = route.params.artistId
+    
+    if (artistId) {
+      // Viewing another artist's studio
+      // Check permissions
+      if (!hasArtistAccess(userData.value, artistId)) {
+        error.value = 'You do not have permission to view this studio'
+        loading.value = false
+        return
+      }
+      
+      // Load specific artist
+      const artistDoc = await getDoc(doc(db, 'artistProfiles', artistId))
+      if (!artistDoc.exists()) {
+        error.value = 'Artist not found'
+        loading.value = false
+        return
+      }
+      
+      artist.value = {
+        id: artistDoc.id,
+        ...artistDoc.data()
+      }
+    } else {
+      // Viewing own studio
+      if (userData.value?.userType !== 'artist') {
+        router.push('/artist/create')
+        return
+      }
+      
+      // Find artist profile for current user
+      const artistQuery = query(
+        collection(db, 'artistProfiles'),
+        where('createdBy', '==', user.uid)
+      )
+      
+      const artistSnapshot = await getDocs(artistQuery)
+      
+      if (artistSnapshot.empty) {
+        // User is an artist but hasn't created a profile yet
+        loading.value = false
+        return
+      }
+      
+      artist.value = {
+        id: artistSnapshot.docs[0].id,
+        ...artistSnapshot.docs[0].data()
+      }
     }
     
     // Load tracks
@@ -408,7 +473,7 @@ const loadArtistData = async () => {
     
   } catch (err) {
     console.error('Error loading artist data:', err)
-    error.value = 'Failed to load your studio data'
+    error.value = 'Failed to load studio data'
   } finally {
     loading.value = false
   }
@@ -736,7 +801,7 @@ const copyLink = async () => {
 .studio-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: var(--spacing-2xl);
   background: var(--bg-card);
   padding: var(--spacing-xl);
@@ -780,6 +845,19 @@ const copyLink = async () => {
   margin: 0;
   color: var(--text-secondary);
   font-size: 1.1rem;
+}
+
+.viewing-notice {
+  margin: var(--spacing-xs) 0 0 0;
+  color: var(--color-primary);
+  font-size: var(--font-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.viewing-notice svg {
+  font-size: 0.9rem;
 }
 
 /* Stats Grid */

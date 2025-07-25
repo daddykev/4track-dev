@@ -27,7 +27,16 @@ import {
   faTimes,
   faChevronDown,
   faSignOutAlt,
-  faBars
+  faBars,
+  faArrowLeft,
+  faEye,
+  faEdit,
+  faTrash,
+  faShare,
+  faLightbulb,
+  faMicrophoneAlt,
+  faCheck,
+  faExternalLinkAlt
 } from '@fortawesome/free-solid-svg-icons'
 
 // Import brands
@@ -64,6 +73,15 @@ library.add(
   faChevronDown,
   faSignOutAlt,
   faBars,
+  faArrowLeft,
+  faEye,
+  faEdit,
+  faTrash,
+  faShare,
+  faLightbulb,
+  faMicrophoneAlt,
+  faCheck,
+  faExternalLinkAlt,
   // Brand icons
   faGoogle,
   faPaypal,
