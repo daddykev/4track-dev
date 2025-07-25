@@ -84,6 +84,12 @@ class AuthService {
   // Sign up with email and password
   async signUp(email, password, displayName = null, inviteCode = null) {
     try {
+      // Validate invite code
+      const validInviteCodes = ['FIRSTWAVE', 'COSMICSLOP']
+      if (!inviteCode || !validInviteCodes.includes(inviteCode.toUpperCase())) {
+        throw new Error('Valid invite code required')
+      }
+      
       // Create Firebase auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
@@ -97,14 +103,15 @@ class AuthService {
       await sendEmailVerification(user)
       
       // Determine user type based on invite code
-      const userType = inviteCode === 'FIRSTWAVE' ? 'artist' : 'consumer'
+      const upperInviteCode = inviteCode.toUpperCase()
+      const userType = upperInviteCode === 'FIRSTWAVE' ? 'artist' : 'consumer'
       
       // Create user document in Firestore
       const userData = {
         uid: user.uid,
         email: user.email,
         displayName: displayName || email.split('@')[0],
-        userType, // Set based on invite code
+        userType,
         platform: '4track',
         subscription: {
           tier: 'free',
@@ -121,8 +128,7 @@ class AuthService {
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
         emailVerified: false,
-        // Store if they used the special invite code
-        inviteCode: inviteCode === 'FIRSTWAVE' ? 'FIRSTWAVE' : null
+        inviteCode: upperInviteCode // Store the used invite code
       }
       
       await setDoc(doc(db, 'users', user.uid), userData)
