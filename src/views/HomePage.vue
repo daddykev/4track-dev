@@ -1,3 +1,12 @@
+<script setup>
+import { onMounted } from 'vue'
+import CustomIcon from '@/components/CustomIcon.vue'
+
+onMounted(() => {
+  document.title = '4track - Open Source Music Platform | Artists Keep 100%'
+})
+</script>
+
 <template>
   <div class="home-page">
     <section class="hero-section">
@@ -7,7 +16,10 @@
           <CustomIcon name="cassetteTape" class="title-icon" />
         </h1>
         <p class="hero-subtitle">
-          Next-gen indie music platform
+          Open source music platform where artists keep 100% of their revenue
+        </p>
+        <p class="hero-tagline">
+          Self-host for complete control or use our hosted service with minimal fees
         </p>
         <div class="hero-actions">
           <router-link to="/signup" class="btn btn-primary btn-lg hero-cta">
@@ -27,7 +39,7 @@
             class="btn btn-github"
           >
             <font-awesome-icon :icon="['fab', 'github']" />
-            GitHub
+            View on GitHub
           </a>
         </div>
       </div>
@@ -36,30 +48,41 @@
     <section class="features-section">
       <div class="container">
         <h2 class="section-title">
-          <font-awesome-icon icon="fa-solid fa-star" />
-          Why 4track?
+          <font-awesome-icon icon="fa-solid fa-music" />
+          Built for Artists
         </h2>
         <div class="features-grid">
           <div class="feature-card">
             <div class="feature-icon">
-              <font-awesome-icon icon="fa-solid fa-dollar-sign" />
+              <font-awesome-icon :icon="['fab', 'paypal']" />
             </div>
-            <h3>Direct Support</h3>
-            <p>100% of your purchases go directly to artists via PayPal</p>
+            <h3>Direct PayPal Payments</h3>
+            <p>Every purchase goes straight to your PayPal. Set up royalty splits for collaborators. No middleman.</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">
-              <font-awesome-icon icon="fa-solid fa-download" />
+              <font-awesome-icon :icon="['fab', 'github']" />
             </div>
-            <h3>Own Your Music</h3>
-            <p>Download tracks to keep forever, DRM-free</p>
+            <h3>Open Source Freedom</h3>
+            <p>Self-host and keep 100% of revenue, or use our hosted solution at 5% fee (storage and streaming).</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">
-              <font-awesome-icon icon="fa-solid fa-users" />
+              <font-awesome-icon icon="fa-solid fa-volume-up" />
             </div>
-            <h3>Discover Artists</h3>
-            <p>Find new music from independent creators worldwide</p>
+            <h3>Studio Quality Audio</h3>
+            <p>Share your music in HD up to 24-bit, 96 kHz. Listeners experience your art as intended.</p>
+          </div>
+        </div>
+        <div class="artist-cta">
+          <p class="text-center text-secondary mb-lg">
+            Join the movement. Take control of your music.
+          </p>
+          <div class="flex flex-center">
+            <router-link to="/artist/create" class="btn btn-outline">
+              <font-awesome-icon icon="fa-solid fa-star" />
+              Become an Artist
+            </router-link>
           </div>
         </div>
       </div>
@@ -68,30 +91,59 @@
     <section class="how-it-works-section">
       <div class="container">
         <h2 class="section-title">
-          <font-awesome-icon icon="fa-solid fa-gear" />
-          How It Works
+          <font-awesome-icon icon="fa-solid fa-heart" />
+          Designed for Music Lovers
         </h2>
         <div class="steps-grid">
           <div class="step-card">
             <div class="step-number">
-              <font-awesome-icon icon="fa-solid fa-play" />
+              <font-awesome-icon icon="fa-solid fa-search" />
             </div>
             <h3>Discover</h3>
-            <p>Browse artist medleys and find your new favorite songs</p>
+            <p>Browse artist medleys and find your new favorite independent music</p>
           </div>
           <div class="step-card">
             <div class="step-number">
               <font-awesome-icon icon="fa-solid fa-heart" />
             </div>
             <h3>Save</h3>
-            <p>Heart tracks you love to build your collection</p>
+            <p>Heart tracks you love to build your personal collection</p>
           </div>
           <div class="step-card">
             <div class="step-number">
-              <font-awesome-icon icon="fa-solid fa-credit-card" />
+              <font-awesome-icon icon="fa-solid fa-dollar-sign" />
             </div>
             <h3>Support</h3>
-            <p>Purchase tracks directly to support artists</p>
+            <p>Purchase tracks knowing 100% goes directly to the artist</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="philosophy-section">
+      <div class="container">
+        <div class="philosophy-content card">
+          <h2 class="text-center mb-lg">
+            <font-awesome-icon icon="fa-solid fa-users" />
+            Why We Built 4track
+          </h2>
+          <div class="philosophy-grid">
+            <div class="philosophy-item">
+              <h3 class="text-primary">Artist-First</h3>
+              <p>No platform fees on sales. Artists set their own prices. Direct relationships with fans.</p>
+            </div>
+            <div class="philosophy-item">
+              <h3 class="text-primary">Privacy-First</h3>
+              <p>No cookies, no tracking, minimal data collection. GDPR and CCPA compliant by design.</p>
+            </div>
+            <div class="philosophy-item">
+              <h3 class="text-primary">Community-Driven</h3>
+              <p>Open source means transparency. Fork it, improve it, make it yours. Join our mission.</p>
+            </div>
+            <div class="philosophy-item">
+              <h3 class="text-primary">Free Forever</h3>
+              <p>Core features will always be free. No paywalls between artists and their audience.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -101,34 +153,30 @@
       <div class="container">
         <div class="cta-content">
           <h2>
-            <font-awesome-icon icon="fa-solid fa-users" />
-            Ready to start your collection?
+            <font-awesome-icon icon="fa-solid fa-play" />
+            The future of software is open source
           </h2>
-          <p>Join thousands of music lovers supporting independent artists</p>
+          <p>Join a platform that puts artists and listeners first</p>
           <div class="cta-buttons">
             <router-link to="/signup" class="btn btn-primary btn-lg">
               <font-awesome-icon icon="fa-solid fa-plus" />
               Create Free Account
             </router-link>
-            <router-link to="/discover" class="btn btn-outline btn-lg">
-              <font-awesome-icon icon="fa-solid fa-search" />
-              Discover Music
-            </router-link>
+            <a 
+              href="https://github.com/daddykev/4track-dev" 
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-outline btn-lg"
+            >
+              <font-awesome-icon :icon="['fab', 'github']" />
+              Explore Code
+            </a>
           </div>
         </div>
       </div>
     </section>
   </div>
 </template>
-
-<script setup>
-import { onMounted } from 'vue'
-import CustomIcon from '@/components/CustomIcon.vue'
-
-onMounted(() => {
-  document.title = '4track - Next-gen indie music platform'
-})
-</script>
 
 <style scoped>
 /* Hero Section */
@@ -159,7 +207,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm); /* Changed from var(--spacing-md) to var(--spacing-sm) */
+  gap: var(--spacing-sm);
   white-space: nowrap;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
   color: var(--text-inverse);
@@ -179,10 +227,18 @@ onMounted(() => {
 
 .hero-subtitle {
   font-size: 1.25rem;
-  margin-bottom: var(--spacing-2xl);
+  margin-bottom: var(--spacing-sm);
   opacity: 0.95;
   line-height: 1.6;
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+  color: var(--text-inverse);
+}
+
+.hero-tagline {
+  font-size: 1rem;
+  margin-bottom: var(--spacing-2xl);
+  opacity: 0.85;
+  line-height: 1.6;
   color: var(--text-inverse);
 }
 
@@ -263,6 +319,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-2xl);
 }
 
 .feature-card {
@@ -300,6 +357,10 @@ onMounted(() => {
 .feature-card p {
   color: var(--text-secondary);
   line-height: 1.6;
+}
+
+.artist-cta {
+  margin-top: var(--spacing-xl);
 }
 
 /* How It Works Section */
@@ -342,6 +403,34 @@ onMounted(() => {
 .step-card p {
   color: var(--text-secondary);
   line-height: 1.6;
+}
+
+/* Philosophy Section */
+.philosophy-section {
+  padding: 4rem 0;
+  background-color: var(--bg-secondary);
+}
+
+.philosophy-content {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.philosophy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--spacing-xl);
+}
+
+.philosophy-item h3 {
+  margin-bottom: var(--spacing-sm);
+  font-size: 1.1rem;
+}
+
+.philosophy-item p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.95rem;
 }
 
 /* GitHub row */
@@ -407,13 +496,26 @@ onMounted(() => {
   justify-content: center;
 }
 
+/* Fixed outline button for light mode visibility */
 .btn-outline {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+}
+
+.btn-outline:hover {
+  background-color: var(--color-primary);
+  color: var(--text-inverse);
+}
+
+/* CTA section needs special handling for outline buttons */
+.cta-section .btn-outline {
   background-color: transparent;
   color: var(--text-inverse);
   border: 2px solid var(--text-inverse);
 }
 
-.btn-outline:hover {
+.cta-section .btn-outline:hover {
   background-color: var(--text-inverse);
   color: var(--color-primary);
 }
@@ -456,6 +558,11 @@ onMounted(() => {
   
   .hero-subtitle {
     font-size: 1.1rem;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .hero-tagline {
+    font-size: 0.9rem;
     margin-bottom: var(--spacing-xl);
   }
   
@@ -483,7 +590,8 @@ onMounted(() => {
   }
 
   .features-section,
-  .how-it-works-section {
+  .how-it-works-section,
+  .philosophy-section {
     padding: var(--spacing-2xl) 0;
   }
   
@@ -505,7 +613,8 @@ onMounted(() => {
     height: 3rem;
   }
 
-  .steps-grid {
+  .steps-grid,
+  .philosophy-grid {
     grid-template-columns: 1fr;
   }
 
