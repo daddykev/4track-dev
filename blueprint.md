@@ -119,6 +119,7 @@ fourtrack-os/
 6. **Download Control** - Choose stream-only or allow downloads
 7. **Public Link** - Share medley at `4track.io/artistname`
 8. **Basic Analytics** - Track plays, hearts, and revenue
+9. **Photo Gallery** - Upload artist photos with automatic thumbnail generation
 
 ### For Fans
 1. **Discover Music** - Browse artists by genre
@@ -259,7 +260,6 @@ fourtrack-os/
 ```
 
 #### medleyRoyalties (PayPal transactions)
-
 ```
 {
   trackId: string,
@@ -277,6 +277,32 @@ fourtrack-os/
   timestamp: timestamp
 }
 ```
+
+#### artistPhotos
+```
+{
+  artistId: string,
+  originalUrl: string,
+  originalPath: string,
+  thumbnailUrl: string,
+  thumbnailPath: string,
+  fileName: string,
+  fileSize: number,
+  width: number,
+  height: number,
+  isPrimary: boolean,
+  metadata: object, // EXIF data
+  uploadedBy: string,
+  uploadedAt: timestamp
+}
+```
+
+## Storage Paths
+
+- **Medley Audio**: `/{userId}/medley/{artistId}/audio/{fileName}` (up to 200MB)
+- **Medley Artwork**: `/{userId}/medley/{artistId}/artwork/{fileName}` (up to 20MB)
+- **Artist Photos**: `/{userId}/artist-photos/{artistId}/original_{fileName}` (up to 20MB)
+- **Photo Thumbnails**: `/{userId}/artist-photos/{artistId}/thumbnails/{fileName}.webp` (1000px, 85% quality)
 
 ## Utility Functions
 
@@ -333,6 +359,8 @@ Enhanced artist dashboard combining profile and medley management:
 - Upload audio files (up to 200MB) and artwork (up to 20MB)
 - Set track pricing ($0-10) and download permissions
 - Share public medley link
+- Upload artist photos with automatic thumbnail generation
+- Set primary photo for artist profile image
 - All-in-one interface at `/studio` route
 
 ### AdminUsers
@@ -357,11 +385,14 @@ Admin interface for artist application review:
 - Public read access for artist profiles and medley tracks
 - Authenticated write access for own content only
 - Transaction records are write-only from backend
+- Artist photos metadata public read, authenticated write
 
 ### Storage Rules
 - Public read for medley audio and artwork
+- Public read for artist photos and thumbnails
 - Authenticated upload with file size limits
 - Path-based access control
+- Supports nested folder structure for thumbnails
 
 ## Cloud Functions
 
@@ -470,5 +501,6 @@ artistAccess: {
 - Admin routes protected by router navigation guards
 - **Artist Studio provides integrated medley management and analytics**
 - **Single destination at `/studio` for all artist needs**
+- **Photo management integrated into Artist Studio with automatic profile image update**
 - **Hierarchical permissions allow labels/managers to access artist studios**
 - **Spotify integration available during artist creation for metadata import**
