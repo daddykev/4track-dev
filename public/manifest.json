@@ -1,0 +1,26 @@
+{
+  "name": "4track",
+  "short_name": "4track", 
+  "description": "Next-gen indie music platform",
+  "icons": [
+    {
+      "src": "/4track-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/4track-32x32.png", 
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/4track-512x512.png",
+      "sizes": "512x512", 
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#667eea",
+  "background_color": "#ffffff"
+}
