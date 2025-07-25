@@ -19,7 +19,7 @@ onMounted(() => {
           Next-gen indie music platform
         </p>
         <p class="hero-tagline">
-          Open source music business software developed for artists, by artists
+          Open source music industry software — developed for artists by artists
         </p>
         <div class="hero-actions">
           <router-link to="/signup" class="btn btn-primary btn-lg hero-cta">
@@ -64,14 +64,14 @@ onMounted(() => {
               <font-awesome-icon :icon="['fab', 'github']" />
             </div>
             <h3>Open Source Freedom</h3>
-            <p>Self-host and keep 100% of revenue, or use our hosted solution at 5% fee (storage and streaming).</p>
+            <p>Self-host and keep 100% of revenue, or use our hosted solution at 2% fee (storage and support).</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">
               <font-awesome-icon icon="fa-solid fa-volume-up" />
             </div>
             <h3>Studio Quality Audio</h3>
-            <p>Share your music in HD up to 24-bit, 96 kHz. Listeners experience your art as intended.</p>
+            <p>Share your music in HD up to 32-bit, 192 kHz. Listeners experience your art as intended.</p>
           </div>
         </div>
         <div class="artist-cta">
@@ -81,7 +81,7 @@ onMounted(() => {
           <div class="flex flex-center">
             <router-link to="/artist/create" class="btn btn-outline">
               <font-awesome-icon icon="fa-solid fa-star" />
-              Become an Artist
+              Early Artist Access
             </router-link>
           </div>
         </div>
@@ -100,7 +100,7 @@ onMounted(() => {
               <font-awesome-icon icon="fa-solid fa-search" />
             </div>
             <h3>Discover</h3>
-            <p>Browse artist medleys and find your new favorite independent music</p>
+            <p>A music-only, infinite-scrolling feed</p>
           </div>
           <div class="step-card">
             <div class="step-number">
@@ -113,8 +113,8 @@ onMounted(() => {
             <div class="step-number">
               <font-awesome-icon icon="fa-solid fa-dollar-sign" />
             </div>
-            <h3>Support</h3>
-            <p>Purchase tracks knowing 100% goes directly to the artist</p>
+            <h3>Artist Support</h3>
+            <p>Purchase tracks knowing where the money goes</p>
           </div>
         </div>
       </div>
