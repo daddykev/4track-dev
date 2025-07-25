@@ -21,6 +21,7 @@
 - **Styling**: CSS with utility-first architecture
 - **Icons**: FontAwesome 7
 - **Audio**: HTML5 Audio for playback, Web Audio API for visualizations
+- **Image Processing**: Pixels.js for photo filters and effects
 
 ### Backend
 - **Database**: Firebase Firestore
@@ -49,6 +50,7 @@ fourtrack-os/
 │   ├── components/             # Reusable Vue components
 │   │   ├── CustomIcon.vue      # Reusable component for rendering SVG icons
 │   │   ├── NavBar.vue          # Main navigation
+│   │   ├── PhotoLab.vue        # Photo editing modal with filters
 │   │   ├── SessionMeters.vue   # Audio level meters
 │   │   ├── SessionSpectroscope.vue # Frequency analyzer
 │   │   └── EmailVerificationBanner.vue # Email verification reminder
@@ -120,6 +122,7 @@ fourtrack-os/
 7. **Public Link** - Share medley at `4track.io/artistname`
 8. **Basic Analytics** - Track plays, hearts, and revenue
 9. **Photo Gallery** - Upload artist photos with automatic thumbnail generation
+10. **Photo Lab** - Apply artistic filters to photos using 10 different effects
 
 ### For Fans
 1. **Discover Music** - Browse artists by genre
@@ -140,6 +143,22 @@ fourtrack-os/
 2. **Application Review** - Approve/deny artist applications
 3. **Platform Stats** - Monitor user growth and activity
 4. **Access Control** - Admin-only routes and features
+
+### Photo Features
+1. **Photo Upload** - High-resolution artist photos (up to 20MB)
+2. **Automatic Thumbnails** - WebP format, 1000px, 85% quality
+3. **Primary Photo** - Set main profile image
+4. **Photo Lab** - Creative photo editing with filters:
+   - Vintage
+   - Perfume
+   - Serenity
+   - Pink Aura
+   - Ocean
+   - Mellow
+   - Coral
+   - Crimson
+   - Greyscale
+   - Phase
 
 ### Authentication & Security
 1. **Email Verification** - Required for all email/password signups
@@ -304,6 +323,15 @@ fourtrack-os/
 - **Artist Photos**: `/{userId}/artist-photos/{artistId}/original_{fileName}` (up to 20MB)
 - **Photo Thumbnails**: `/{userId}/artist-photos/{artistId}/thumbnails/{fileName}.webp` (1000px, 85% quality)
 
+## Third-Party Integrations
+
+### Pixels.js
+The platform uses Pixels.js (loaded via CDN) for photo filter effects in the PhotoLab component:
+- **Library**: https://github.com/silvia-odwyer/pixels.js
+- **Method**: Uses `filterImgData` for applying filters to ImageData
+- **Filters**: 10 artistic filters available for artist photos
+- **Implementation**: Works with canvas ImageData to avoid DOM manipulation issues
+
 ## Utility Functions
 
 ### permissions.js
@@ -361,7 +389,18 @@ Enhanced artist dashboard combining profile and medley management:
 - Share public medley link
 - Upload artist photos with automatic thumbnail generation
 - Set primary photo for artist profile image
+- **Photo Lab integration for creative photo editing**
 - All-in-one interface at `/studio` route
+
+### PhotoLab
+Photo editing modal component with artistic filters:
+- **Powered by Pixels.js** for professional-quality filters
+- **10 artistic filters** including Vintage, Ocean, Pink Aura, and more
+- **Non-destructive editing** - original photos are preserved
+- **Preview grid** showing all filter options
+- **One-click application** and save
+- **Processed photos** saved as new artist photos
+- **Responsive design** works on all devices
 
 ### AdminUsers
 Admin dashboard for user management:
@@ -502,5 +541,8 @@ artistAccess: {
 - **Artist Studio provides integrated medley management and analytics**
 - **Single destination at `/studio` for all artist needs**
 - **Photo management integrated into Artist Studio with automatic profile image update**
+- **PhotoLab component provides creative photo editing with Pixels.js filters**
+- **Pixels.js loaded via CDN in index.html**
+- **Filter processing uses ImageData to avoid DOM manipulation issues**
 - **Hierarchical permissions allow labels/managers to access artist studios**
 - **Spotify integration available during artist creation for metadata import**
