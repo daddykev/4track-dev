@@ -2,6 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService } from '@/services/auth'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { db } from '@/firebase'
 
 const router = useRouter()
 
@@ -17,29 +19,58 @@ const resendLoading = ref(false)
 const resendCooldown = ref(0)
 const inviteCodeError = ref('')
 
+// Available invite codes from Firestore
+const availableInviteCodes = ref([])
+const codesLoading = ref(true)
+
 let cooldownInterval = null
+
+// Load invite codes from Firestore
+const loadInviteCodes = async () => {
+  try {
+    const q = query(
+      collection(db, 'inviteCodes'),
+      where('active', '==', true)
+    )
+    const snapshot = await getDocs(q)
+    
+    availableInviteCodes.value = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+  } catch (err) {
+    console.error('Error loading invite codes:', err)
+  } finally {
+    codesLoading.value = false
+  }
+}
 
 // Compute invite code validity and message
 const inviteCodeValid = computed(() => {
   const code = inviteCode.value.toUpperCase()
-  return code === 'FIRSTWAVE' || code === 'COSMICSLOP'
+  return availableInviteCodes.value.some(ic => ic.code === code)
+})
+
+const inviteCodeData = computed(() => {
+  const code = inviteCode.value.toUpperCase()
+  return availableInviteCodes.value.find(ic => ic.code === code)
 })
 
 const inviteCodeMessage = computed(() => {
-  const code = inviteCode.value.toUpperCase()
-  if (code === 'FIRSTWAVE') {
+  if (!inviteCodeData.value) return ''
+  
+  if (inviteCodeData.value.userType === 'artist') {
     return 'Artist access unlocked!'
-  } else if (code === 'COSMICSLOP') {
-    return 'Valid invite code'
+  } else {
+    return inviteCodeData.value.description || 'Valid invite code'
   }
-  return ''
 })
 
 const validateInviteCode = () => {
   const code = inviteCode.value.toUpperCase()
   if (!code) {
     inviteCodeError.value = ''
-  } else if (code !== 'FIRSTWAVE' && code !== 'COSMICSLOP') {
+  } else if (!inviteCodeValid.value) {
     inviteCodeError.value = 'Invalid invite code'
   } else {
     inviteCodeError.value = ''
@@ -127,6 +158,8 @@ const resetForm = () => {
 }
 
 onMounted(() => {
+  loadInviteCodes()
+  
   return () => {
     if (cooldownInterval) clearInterval(cooldownInterval)
   }
@@ -134,7 +167,20 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="auth-page">
+  <!-- Loading state for invite codes -->
+  <div v-if="codesLoading" class="auth-page">
+    <div class="auth-container">
+      <div class="auth-card">
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main signup form -->
+  <div v-else class="auth-page">
     <div class="auth-container">
       <div class="auth-card">
         <!-- Show verification message if email was sent -->
@@ -200,6 +246,7 @@ onMounted(() => {
                 <font-awesome-icon :icon="['fas', 'check-circle']" />
                 {{ inviteCodeMessage }}
               </p>
+              <p v-else class="form-hint">Ask an existing user for an invite code</p>
             </div>
 
             <div class="form-group">

@@ -84,12 +84,6 @@ class AuthService {
   // Sign up with email and password
   async signUp(email, password, displayName = null, inviteCode = null) {
     try {
-      // Validate invite code
-      const validInviteCodes = ['FIRSTWAVE', 'COSMICSLOP']
-      if (!inviteCode || !validInviteCodes.includes(inviteCode.toUpperCase())) {
-        throw new Error('Valid invite code required')
-      }
-      
       // Create Firebase auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
@@ -103,8 +97,30 @@ class AuthService {
       await sendEmailVerification(user)
       
       // Determine user type based on invite code
-      const upperInviteCode = inviteCode.toUpperCase()
-      const userType = upperInviteCode === 'FIRSTWAVE' ? 'artist' : 'consumer'
+      let userType = 'consumer'
+      let validInviteCode = null
+      
+      if (inviteCode) {
+        // Look up invite code in Firestore
+        const inviteCodesQuery = query(
+          collection(db, 'inviteCodes'),
+          where('code', '==', inviteCode.toUpperCase()),
+          where('active', '==', true)
+        )
+        const inviteSnapshot = await getDocs(inviteCodesQuery)
+        
+        if (!inviteSnapshot.empty) {
+          validInviteCode = inviteSnapshot.docs[0].data()
+          userType = validInviteCode.userType
+          
+          // Increment usage count
+          const inviteDocRef = doc(db, 'inviteCodes', inviteSnapshot.docs[0].id)
+          await setDoc(inviteDocRef, {
+            usageCount: (validInviteCode.usageCount || 0) + 1,
+            lastUsed: serverTimestamp()
+          }, { merge: true })
+        }
+      }
       
       // Create user document in Firestore
       const userData = {
@@ -128,7 +144,7 @@ class AuthService {
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
         emailVerified: false,
-        inviteCode: upperInviteCode // Store the used invite code
+        inviteCode: validInviteCode ? inviteCode.toUpperCase() : null
       }
       
       await setDoc(doc(db, 'users', user.uid), userData)

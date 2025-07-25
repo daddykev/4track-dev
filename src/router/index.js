@@ -17,6 +17,7 @@ import ArtistStudio from '../views/ArtistStudio.vue'
 import AdminUsers from '../views/AdminUsers.vue'
 import AdminArtists from '../views/AdminArtists.vue'
 import ArtistRoster from '../views/ArtistRoster.vue'
+import AdminInviteCodes from '../views/AdminInviteCodes.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -102,6 +103,12 @@ const router = createRouter({
       name: 'admin-artists',
       component: AdminArtists,
       meta: { title: 'Artist Applications - 4track Admin', requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/admin/invite-codes',
+      name: 'admin-invite-codes',
+      component: AdminInviteCodes,
+      meta: { title: 'Invite Codes - 4track Admin', requiresAuth: true, requiresAdmin: true }
     },
     // Catch-all route for 404s
     {

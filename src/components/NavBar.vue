@@ -275,6 +275,15 @@ onMounted(() => {
                     <font-awesome-icon :icon="['fas', 'music']" class="dropdown-icon" />
                     Artist Applications
                   </router-link>
+
+                  <router-link 
+                    to="/admin/invite-codes" 
+                    class="dropdown-item"
+                    @click="closeUserMenu"
+                  >
+                    <font-awesome-icon :icon="['fas', 'key']" class="dropdown-icon" />
+                    Invite Codes
+                  </router-link>
                 </template>
                 
                 <div class="dropdown-divider"></div>
