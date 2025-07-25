@@ -16,10 +16,10 @@ onMounted(() => {
           <CustomIcon name="cassetteTape" class="title-icon" />
         </h1>
         <p class="hero-subtitle">
-          Open source music platform where artists keep 100% of their revenue
+          Next-gen indie music platform
         </p>
         <p class="hero-tagline">
-          Self-host for complete control or use our hosted service with minimal fees
+          Open source music business software developed for artists, by artists
         </p>
         <div class="hero-actions">
           <router-link to="/signup" class="btn btn-primary btn-lg hero-cta">
@@ -57,7 +57,7 @@ onMounted(() => {
               <font-awesome-icon :icon="['fab', 'paypal']" />
             </div>
             <h3>Direct PayPal Payments</h3>
-            <p>Every purchase goes straight to your PayPal. Set up royalty splits for collaborators. No middleman.</p>
+            <p>Every purchase goes straight to your PayPal. Set up royalty splits for collaborators. Get paid today.</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">
@@ -156,7 +156,7 @@ onMounted(() => {
             <font-awesome-icon icon="fa-solid fa-play" />
             The future of software is open source
           </h2>
-          <p>Join a platform that puts artists and listeners first</p>
+          <p>Join the platform that puts artists and listeners first</p>
           <div class="cta-buttons">
             <router-link to="/signup" class="btn btn-primary btn-lg">
               <font-awesome-icon icon="fa-solid fa-plus" />
@@ -226,7 +226,7 @@ onMounted(() => {
 }
 
 .hero-subtitle {
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   margin-bottom: var(--spacing-sm);
   opacity: 0.95;
   line-height: 1.6;
