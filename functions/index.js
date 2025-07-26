@@ -235,6 +235,15 @@ exports.captureMedleyPayment = onCall({
     
     const track = trackDoc.data();
     
+    // Get artist details to record their PayPal email
+    const artistDoc = await db.collection('artistProfiles').doc(artistId).get();
+    const artist = artistDoc.exists ? artistDoc.data() : {};
+    
+    // IMPORTANT: Use the authenticated user's email as the payer
+    // This is what MusicCollection.vue queries for
+    const buyerEmail = request.auth?.token?.email || captureData.payer?.email_address || null;
+    const buyerId = request.auth?.uid || null;
+    
     // Record the transaction
     const royaltyDoc = await db.collection('medleyRoyalties').add({
       trackId,
@@ -247,15 +256,23 @@ exports.captureMedleyPayment = onCall({
       status: capture.status,
       type: 'purchase',
       timestamp: FieldValue.serverTimestamp(),
-      payerEmail: captureData.payer?.email_address || null,
-      payerId: captureData.payer?.payer_id || null,
+      // Buyer information (this is what MusicCollection queries)
+      payerEmail: buyerEmail, // The authenticated user who bought the track
+      payerId: captureData.payer?.payer_id || buyerId,
+      userId: buyerId, // Firebase user ID of the buyer
+      // Artist payment information
+      artistPayPalEmail: artist.paypalEmail || purchaseUnit.payee?.email_address,
       // Store fee information
       grossAmount: parseFloat(capture.seller_receivable_breakdown.gross_amount.value),
       paypalFee: parseFloat(capture.seller_receivable_breakdown.paypal_fee.value),
       netAmount: parseFloat(capture.seller_receivable_breakdown.net_amount.value)
     });
     
-    console.log('Royalty recorded:', royaltyDoc.id);
+    console.log('Royalty recorded:', {
+      royaltyId: royaltyDoc.id,
+      buyerEmail: buyerEmail,
+      artistPayPalEmail: artist.paypalEmail
+    });
     
     // Generate secure download URL if download is allowed
     let downloadUrl = null;

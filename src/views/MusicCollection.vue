@@ -332,7 +332,11 @@ const loadCollection = async () => {
     
     // Also load direct purchases from medleyRoyalties
     console.log('🔍 Querying medleyRoyalties...')
-    console.log('📝 Query: medleyRoyalties where payerEmail ==', user.value.email, 'and type in [purchase, free_download]')
+    console.log('📝 Query parameters:', {
+      collection: 'medleyRoyalties',
+      payerEmail: user.value.email,
+      types: ['purchase', 'free_download']
+    })
     
     const purchasesQuery = query(
       collection(db, 'medleyRoyalties'),
