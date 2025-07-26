@@ -244,12 +244,12 @@ onMounted(() => {
                 
                 <router-link 
                   v-if="isArtistUser && hasArtistProfile"
-                  :to="`/artist/${artistProfile.id}/medley`" 
+                  :to="`/${artistProfile.customSlug || artistProfile.id}`" 
                   class="dropdown-item"
                   @click="closeUserMenu"
                 >
-                  <font-awesome-icon :icon="['fas', 'list']" class="dropdown-icon" />
-                  Manage Medley
+                  <font-awesome-icon :icon="['fas', 'play']" class="dropdown-icon" />
+                  View Public Page
                 </router-link>
                 
                 <!-- Admin section -->
@@ -321,8 +321,7 @@ onMounted(() => {
 }
 
 .navbar-container {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
   padding: 0 var(--spacing-lg);
   display: flex;
   align-items: center;
@@ -339,11 +338,6 @@ onMounted(() => {
   color: var(--text-primary);
   font-weight: 700;
   font-size: var(--font-xl);
-}
-
-.brand-icon {
-  color: var(--color-primary);
-  font-size: var(--font-2xl);
 }
 
 .brand-text {
@@ -369,9 +363,7 @@ onMounted(() => {
 .navbar-menu {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex: 1;
-  margin-left: var(--spacing-2xl);
+  gap: var(--spacing-lg);
 }
 
 .navbar-start,
