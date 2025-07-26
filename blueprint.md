@@ -75,7 +75,7 @@ fourtrack-os/
 │   │   ├── AdminArtists.vue    # Admin: Review artist applications
 │   │   ├── AdminUsers.vue      # Admin: User management dashboard
 │   │   ├── ArtistRoster.vue    # Multi-artist management for admin/label/manager users
-│   │   ├── ArtistStudio.vue    # Combined artist dashboard and medley management
+│   │   ├── ArtistStudio.vue    # Combined artist dashboard with royalty split management
 │   │   ├── CreateArtist.vue    # Artist onboarding (requires verified email)
 │   │   ├── DiscoverPage.vue    # Music discover
 │   │   ├── HomePage.vue        # Landing page
@@ -91,8 +91,7 @@ fourtrack-os/
 │   └── firebase.js             # Firebase configuration
 │
 ├── functions/                  # Cloud Functions
-│   ├── index.js                # Function exports
-│   ├── medleyFunctions.js      # PayPal & medley logic
+│   ├── index.js                # Main cloud functions including PayPal processing
 │   └── analyticsFunctions.js   # Privacy-focused analytics
 │
 ├── public/                     # Static assets
@@ -123,6 +122,7 @@ fourtrack-os/
 8. **Basic Analytics** - Track plays, hearts, and revenue
 9. **Photo Gallery** - Upload artist photos with automatic thumbnail generation
 10. **Photo Lab** - Apply artistic filters to photos using 10 different effects
+11. **Collaborator Royalty Splits** - Automatically split payments between multiple artists
 
 ### For Fans
 1. **Discover Music** - Browse artists by genre
@@ -130,6 +130,7 @@ fourtrack-os/
 3. **Direct Support** - Pay artists directly via PayPal
 4. **Download Library** - Access purchased tracks anytime
 5. **Heart Tracks** - Save favorites for later purchase
+6. **See Collaborators** - View all artists featured on a track
 
 ### For Labels & Managers
 1. **Artist Roster** - Centralized multi-artist management
@@ -160,6 +161,18 @@ fourtrack-os/
    - Greyscale
    - Phase
 
+### Collaborator Royalty Management
+1. **Add Collaborators** - Add featured artists, producers, and other contributors
+2. **Percentage Splits** - Define exact percentage for each collaborator (must total 100%)
+3. **Automatic Distribution** - PayPal sends payments directly to each collaborator
+4. **Equal Split Calculator** - One-click to divide royalties equally
+5. **Primary Artist Protection** - Main artist cannot be removed and is auto-populated
+6. **Validation** - Real-time validation ensures splits always total 100%
+7. **PayPal Email Collection** - Each collaborator must provide their PayPal email
+8. **Multi-Party Payments** - Uses PayPal's purchase units for simultaneous payouts
+9. **Partial Payment Handling** - System handles cases where some collaborators can't be paid
+10. **Transaction Transparency** - All splits recorded in royalty records
+
 ### Authentication & Security
 1. **Email Verification** - Required for all email/password signups
 2. **Google Sign-In** - Pre-verified authentication option
@@ -171,7 +184,7 @@ fourtrack-os/
 ### Privacy & Security
 1. **No Cookies** - Zero tracking cookies
 2. **Session-Based** - Analytics use temporary session IDs
-3. **GDPR and CCPA Compliant** - Minimal data collection
+3. **GDPR/CCPA Compliant** - Minimal data collection
 4. **Secure Payments** - PayPal handles all payment data
 5. **User Control** - Full data export and deletion
 
@@ -283,16 +296,32 @@ fourtrack-os/
 {
   trackId: string,
   artistId: string,
+  trackTitle: string,
   payerId: string,
   payerEmail: string,
   artistPayPalEmail: string,
   amount: number,
   currency: string,
-  paypalOrderId: string,
-  paypalCaptureId: string,
+  orderId: string, // PayPal Order ID
+  status: string, // 'COMPLETED' or 'PARTIALLY_COMPLETED'
   type: 'purchase' | 'free_download',
   downloadUrl: string,
   downloadExpiry: timestamp,
+  collaborators: [{ // Copy of collaborator splits for record keeping
+    name: string,
+    email: string,
+    percentage: number,
+    isPrimary: boolean
+  }],
+  collaboratorPayments: [{ // Actual payment records per collaborator
+    name: string,
+    percentage: number,
+    amount: number,
+    transactionId: string, // PayPal capture ID for this payment
+    status: string, // Individual payment status
+    isPrimary: boolean
+  }],
+  notes: string, // Optional notes about partial payments
   timestamp: timestamp
 }
 ```
@@ -332,6 +361,14 @@ The platform uses Pixels.js (loaded via CDN) for photo filter effects in the Pho
 - **Filters**: 10 artistic filters available for artist photos
 - **Implementation**: Works with canvas ImageData to avoid DOM manipulation issues
 
+### PayPal Multi-Party Payments
+The platform uses PayPal's advanced checkout features for royalty splits:
+- **Single Payee Mode**: For tracks with one artist (backward compatible)
+- **Multiple Purchase Units**: For tracks with collaborators (automatic splits)
+- **Reference ID Metadata**: Stores collaborator info in base64-encoded JSON
+- **Partial Payment Handling**: Continues if some collaborators fail
+- **Direct Payouts**: Each collaborator receives payment directly to their PayPal
+
 ## Utility Functions
 
 ### permissions.js
@@ -342,6 +379,14 @@ Centralized permission checking for role-based access control:
 - `getAccessibleArtists()` - Retrieve all artists user can manage
 - `getRoleLabel()` - Format role for display
 - `extractSpotifyArtistId()` - Parse Spotify URLs
+
+### Collaborator Management Functions (in ArtistStudio.vue)
+- `addCollaborator()` - Add new collaborator to track
+- `removeCollaborator(index)` - Remove collaborator (except primary)
+- `updateCollaboratorSplit(index, value)` - Update percentage with validation
+- `autoBalanceSplits()` - Equally divide 100% among all collaborators
+- `totalSplitPercentage` - Computed sum of all percentages
+- `isSplitValid` - Computed validation that total equals 100%
 
 ## Authentication Flow
 
@@ -386,11 +431,28 @@ Enhanced artist dashboard combining profile and medley management:
 - Manage up to 4 medley tracks with drag-and-drop interface
 - Upload audio files (up to 200MB) and artwork (up to 20MB)
 - Set track pricing ($0-10) and download permissions
+- **Configure royalty splits for each track with collaborators**
+- **Add unlimited collaborators per track**
+- **Automatic validation ensures splits total 100%**
+- **Equal split calculator for fair distribution**
 - Share public medley link
 - Upload artist photos with automatic thumbnail generation
 - Set primary photo for artist profile image
 - **Photo Lab integration for creative photo editing**
 - All-in-one interface at `/studio` route
+
+### Collaborator Royalty Split Workflow
+1. **Add Track** - Click "Add Track" in an empty slot
+2. **Primary Artist Auto-Added** - System automatically adds the artist as primary collaborator with 100%
+3. **Add Collaborators** - Click "Add Collaborator" to add featured artists/producers
+4. **Enter Details** - For each collaborator, provide:
+   - Display name (required)
+   - PayPal email (required, must be valid)
+   - Percentage split (must be > 0)
+5. **Balance Splits** - Use "Split Equally" button or manually adjust percentages
+6. **Validation** - System ensures total equals 100% before allowing save
+7. **Save Track** - Collaborator data stored with track in Firestore
+8. **Payment Processing** - When purchased, PayPal automatically splits payment
 
 ### PhotoLab
 Photo editing modal component with artistic filters:
@@ -425,6 +487,7 @@ Admin interface for artist application review:
 - Authenticated write access for own content only
 - Transaction records are write-only from backend
 - Artist photos metadata public read, authenticated write
+- Collaborator data included in public track reads
 
 ### Storage Rules
 - Public read for medley audio and artwork
@@ -438,15 +501,28 @@ Admin interface for artist application review:
 ### Core Functions
 
 #### createMedleyPayPalOrder
+Enhanced with multi-party payment support:
 - Creates PayPal checkout for track purchase
 - Validates pricing and availability
+- **Single purchase unit for tracks with one artist**
+- **Multiple purchase units for tracks with collaborators**
+- **Each collaborator receives their percentage directly**
+- **Stores metadata in reference_id for tracking**
+- **Validates all collaborators have PayPal emails**
+- **Adjusts for rounding errors on primary artist**
 - Returns checkout URL for redirect
 
 #### captureMedleyPayment
+Enhanced to handle split payments:
 - Captures PayPal payment after approval
-- Records transaction in medleyRoyalties
+- **Handles both COMPLETED and PARTIALLY_COMPLETED status**
+- **Processes successful captures even if some fail**
+- **Extracts metadata from reference_id or custom_id**
+- **Records individual collaborator payment details**
+- Records transaction in medleyRoyalties with full split details
 - Generates time-limited download URL
 - Handles free downloads
+- **Logs warnings for partial payments**
 
 #### collectAnalytics
 - Privacy-focused event tracking
@@ -474,7 +550,8 @@ Admin interface for artist application review:
    - Create and manage one artist profile
    - Upload medley tracks (up to 4)
    - Set pricing and PayPal integration
-   - View basic analytics
+   - **Configure royalty splits with collaborators**
+   - View basic analytics including split details
    - Requires email verification
 
 3. **label**
@@ -527,6 +604,7 @@ artistAccess: {
 | Artist Roster    | ✗        | ✗       | ✓          | ✓          | ✓      |
 | Manage Artists   | ✗        | ✓ (own) | ✓ (roster) | ✓ (shared) | ✓      |
 | View Analytics   | ✗        | ✓ (own) | ✓ (all)    | ✓ (shared) | ✓      |
+| Configure Splits | ✗        | ✓       | ✓          | ✓          | ✓      |
 | Bulk Operations  | ✗        | ✗       | ✓          | ✗          | ✓      |
 | Platform Admin   | ✗        | ✗       | ✗          | ✗          | ✓      |
 ```
@@ -536,7 +614,7 @@ artistAccess: {
 - User type is stored in the `userType` field in the users collection
 - Email verification required for artist features
 - Application approval workflow prevents spam/abuse
-- PayPal email collected only when needed (paid tracks)
+- PayPal email collected only when needed (paid tracks or collaborator splits)
 - Admin routes protected by router navigation guards
 - **Artist Studio provides integrated medley management and analytics**
 - **Single destination at `/studio` for all artist needs**
@@ -546,3 +624,7 @@ artistAccess: {
 - **Filter processing uses ImageData to avoid DOM manipulation issues**
 - **Hierarchical permissions allow labels/managers to access artist studios**
 - **Spotify integration available during artist creation for metadata import**
+- **Collaborator royalty splits integrated directly into track upload workflow**
+- **PayPal multi-party payments handle automatic distribution**
+- **Split validation prevents saving tracks with invalid percentages**
+- **Primary artist protection ensures main artist is always included**
