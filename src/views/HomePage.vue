@@ -56,7 +56,7 @@ onMounted(() => {
             <div class="feature-icon">
               <font-awesome-icon :icon="['fab', 'paypal']" />
             </div>
-            <h3>Direct PayPal Payments</h3>
+            <h3>Direct Revenue</h3>
             <p>Every purchase goes straight to your PayPal. Set up royalty splits for collaborators. Get paid today.</p>
           </div>
           <div class="feature-card">
@@ -96,25 +96,57 @@ onMounted(() => {
         </h2>
         <div class="steps-grid">
           <div class="step-card">
-            <div class="step-number">
+            <div class="step-icon">
               <font-awesome-icon icon="fa-solid fa-search" />
             </div>
             <h3>Discover</h3>
             <p>A music-only, infinite-scrolling feed</p>
           </div>
           <div class="step-card">
-            <div class="step-number">
+            <div class="step-icon">
               <font-awesome-icon icon="fa-solid fa-heart" />
             </div>
             <h3>Save</h3>
             <p>Heart tracks you love to build your personal collection</p>
           </div>
           <div class="step-card">
-            <div class="step-number">
+            <div class="step-icon">
               <font-awesome-icon icon="fa-solid fa-dollar-sign" />
             </div>
             <h3>Artist Support</h3>
             <p>Purchase tracks knowing where the money goes</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="industry-section">
+      <div class="container">
+        <h2 class="section-title">
+          <font-awesome-icon icon="fa-solid fa-briefcase" />
+          Optimized for Industry
+        </h2>
+        <div class="industry-grid">
+          <div class="industry-card">
+            <div class="industry-icon">
+              <font-awesome-icon icon="fa-solid fa-percentage" />
+            </div>
+            <h3>Royalty Splits</h3>
+            <p>Automatically split payments between collaborators. Define percentages for featured artists, producers, and contributors. PayPal handles multi-party payouts instantly.</p>
+          </div>
+          <div class="industry-card">
+            <div class="industry-icon">
+              <font-awesome-icon icon="fa-solid fa-users" />
+            </div>
+            <h3>Label & Manager Access</h3>
+            <p>Hierarchical permissions for teams. Labels can manage entire rosters. Managers access assigned artists. Everyone sees only what they need.</p>
+          </div>
+          <div class="industry-card">
+            <div class="industry-icon">
+              <font-awesome-icon icon="fa-solid fa-folder-open" />
+            </div>
+            <h3>Artist Roster Management</h3>
+            <p>Centralized dashboard for multi-artist operations. Create profiles, manage releases, track analytics. Built for modern music businesses.</p>
           </div>
         </div>
       </div>
@@ -363,7 +395,7 @@ onMounted(() => {
   margin-top: var(--spacing-xl);
 }
 
-/* How It Works Section */
+/* How It Works Section - Updated */
 .how-it-works-section {
   padding: 4rem 0;
   background-color: var(--bg-primary);
@@ -376,22 +408,29 @@ onMounted(() => {
 }
 
 .step-card {
+  background: var(--bg-card);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
   text-align: center;
-  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  border: 2px solid transparent;
 }
 
-.step-number {
-  width: 80px;
-  height: 80px;
-  border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--color-primary), #764ba2);
-  color: var(--text-inverse);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  margin: 0 auto var(--spacing-md);
+.step-card:hover {
+  transform: translateY(-5px);
   box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
+}
+
+.step-icon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+  color: var(--color-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 4rem;
 }
 
 .step-card h3 {
@@ -405,10 +444,59 @@ onMounted(() => {
   line-height: 1.6;
 }
 
+/* Industry Section - New */
+.industry-section {
+  padding: 4rem 0;
+  background-color: var(--bg-secondary);
+}
+
+.industry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-xl);
+}
+
+.industry-card {
+  background: var(--bg-card);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  border: 2px solid transparent;
+}
+
+.industry-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
+}
+
+.industry-icon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+  color: var(--color-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 4rem;
+}
+
+.industry-card h3 {
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  font-size: 1.25rem;
+}
+
+.industry-card p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
 /* Philosophy Section */
 .philosophy-section {
   padding: 4rem 0;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-primary);
 }
 
 .philosophy-content {
@@ -591,6 +679,7 @@ onMounted(() => {
 
   .features-section,
   .how-it-works-section,
+  .industry-section,
   .philosophy-section {
     padding: var(--spacing-2xl) 0;
   }
@@ -604,24 +693,23 @@ onMounted(() => {
     margin-bottom: var(--spacing-xl);
   }
   
-  .feature-card {
+  .feature-card,
+  .step-card,
+  .industry-card {
     padding: var(--spacing-lg);
   }
   
-  .feature-icon {
+  .feature-icon,
+  .step-icon,
+  .industry-icon {
     font-size: 2.5rem;
     height: 3rem;
   }
 
   .steps-grid,
+  .industry-grid,
   .philosophy-grid {
     grid-template-columns: 1fr;
-  }
-
-  .step-number {
-    width: 60px;
-    height: 60px;
-    font-size: 1.5rem;
   }
 }
 
@@ -640,11 +728,15 @@ onMounted(() => {
     gap: var(--spacing-sm);
   }
   
-  .feature-card h3 {
+  .feature-card h3,
+  .step-card h3,
+  .industry-card h3 {
     font-size: 1.1rem;
   }
   
-  .feature-card p {
+  .feature-card p,
+  .step-card p,
+  .industry-card p {
     font-size: 0.9rem;
   }
 
