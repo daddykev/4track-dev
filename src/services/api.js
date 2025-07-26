@@ -19,9 +19,9 @@ class ApiService {
   }
 
   // Medley/PayPal Functions
-  async createMedleyPayPalOrder(medleyId, trackId) {
+  async createMedleyPayPalOrder(artistId, trackId) {
     return this.callFunction('createMedleyPayPalOrder', {
-      medleyId,
+      artistId,  // Changed from medleyId
       trackId
     })
   }
