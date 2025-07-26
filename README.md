@@ -11,12 +11,12 @@
 
 ### 🎤 For Artists
 - **Direct Monetization** - 100% of revenue goes directly to your PayPal
-- **Medley Player** - Upload up to 4 tracks with custom artwork
+- **Audio Player** - Upload up to 4 tracks with custom artwork
 - **Flexible Pricing** - Set prices from $0-10 per track or offer free downloads
 - **Public Sharing** - Get your own shareable link at `4track.io/yourname`
 - **Photo Gallery** - Upload high-resolution photos with artistic filters
 - **Real-time Analytics** - Track plays, hearts, downloads, and revenue
-- **Email Verification** - Secure artist onboarding with approval workflow
+- **Email Verification** - Secure artist onboarding with verification workflow
 - **Collaborator Royalty Splits** - Automatically split royalty payments between collaborators
 
 ### 🎧 For Listeners
