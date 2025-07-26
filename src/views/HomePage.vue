@@ -200,7 +200,7 @@ onMounted(() => {
 }
 
 .hero-title {
-  font-size: 3rem;
+  font-size: 5.0rem; /* Increased by 30% from 3rem */
   font-weight: 700;
   margin-bottom: var(--spacing-lg);
   line-height: 1.2;
@@ -226,7 +226,7 @@ onMounted(() => {
 }
 
 .hero-subtitle {
-  font-size: 1.4rem;
+  font-size: 1.5rem; /* Increased by 20% from 1.4rem */
   margin-bottom: var(--spacing-sm);
   opacity: 0.95;
   line-height: 1.6;
@@ -235,7 +235,7 @@ onMounted(() => {
 }
 
 .hero-tagline {
-  font-size: 1rem;
+  font-size: 1.1rem; /* Increased by 10% from 1rem */
   margin-bottom: var(--spacing-2xl);
   opacity: 0.85;
   line-height: 1.6;
@@ -550,19 +550,19 @@ onMounted(() => {
   }
   
   .hero-title {
-    font-size: 2rem;
+    font-size: 2.6rem; /* Increased by 30% from 2rem */
     flex-direction: column;
     gap: var(--spacing-sm);
     white-space: normal;
   }
   
   .hero-subtitle {
-    font-size: 1.1rem;
+    font-size: 1.32rem; /* Increased by 20% from 1.1rem */
     margin-bottom: var(--spacing-sm);
   }
 
   .hero-tagline {
-    font-size: 0.9rem;
+    font-size: 0.99rem; /* Increased by 10% from 0.9rem */
     margin-bottom: var(--spacing-xl);
   }
   
@@ -627,11 +627,11 @@ onMounted(() => {
 
 @media (max-width: 480px) {
   .hero-title {
-    font-size: 1.75rem;
+    font-size: 2.275rem; /* Increased by 30% from 1.75rem */
   }
   
   .hero-subtitle {
-    font-size: 1rem;
+    font-size: 1.2rem; /* Increased by 20% from 1rem */
   }
   
   .section-title {
