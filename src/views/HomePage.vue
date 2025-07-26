@@ -181,7 +181,7 @@ onMounted(() => {
 <style scoped>
 /* Hero Section */
 .hero-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: url('/hero-image.webp') center/cover no-repeat;
   color: var(--text-inverse);
   padding: 4rem 0;
   text-align: center;
