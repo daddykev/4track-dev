@@ -2,14 +2,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
-import { collection, doc, setDoc, getDocs, serverTimestamp, query, where } from 'firebase/firestore'
+import { collection, doc, setDoc, getDocs, serverTimestamp, query, where, updateDoc } from 'firebase/firestore'
 import { 
   canViewArtistRoster, 
   getAccessibleArtists, 
   getRoleLabel,
   extractSpotifyArtistId 
 } from '@/utils/permissions'
-import { validateArtistName, validateSlug } from '@/utils/validators'
+import { validateArtistName, validateSlug, validatePayPalEmail } from '@/utils/validators'
 
 const router = useRouter()
 
@@ -21,6 +21,10 @@ const userData = ref(null)
 const showCreateModal = ref(false)
 const createError = ref('')
 const platformStats = ref({ total: 0 })
+const editingPayPal = ref(null)
+const payPalEmail = ref('')
+const payPalError = ref('')
+const savingPayPal = ref(false)
 
 const newArtist = ref({
   name: '',
@@ -144,13 +148,60 @@ const createArtist = async () => {
     newArtist.value = { name: '', spotifyUrl: '' }
     showCreateModal.value = false
     
-    // Navigate to medley management
-    router.push(`/artist/${artistId}/medley`)
+    // Navigate to studio
+    router.push(`/studio/${artistId}`)
     
   } catch (error) {
     createError.value = error.message || 'Failed to create artist'
   } finally {
     creating.value = false
+  }
+}
+
+const startEditPayPal = (artist) => {
+  editingPayPal.value = artist.id
+  payPalEmail.value = artist.paypalEmail || ''
+  payPalError.value = ''
+}
+
+const cancelEditPayPal = () => {
+  editingPayPal.value = null
+  payPalEmail.value = ''
+  payPalError.value = ''
+}
+
+const savePayPalEmail = async (artist) => {
+  savingPayPal.value = true
+  payPalError.value = ''
+  
+  try {
+    // Validate PayPal email if provided
+    if (payPalEmail.value) {
+      const validation = validatePayPalEmail(payPalEmail.value)
+      if (!validation.isValid) {
+        throw new Error(validation.error)
+      }
+    }
+    
+    // Update artist profile
+    await updateDoc(doc(db, 'artistProfiles', artist.id), {
+      paypalEmail: payPalEmail.value || null,
+      updatedAt: serverTimestamp()
+    })
+    
+    // Update local data
+    const artistIndex = artists.value.findIndex(a => a.id === artist.id)
+    if (artistIndex !== -1) {
+      artists.value[artistIndex].paypalEmail = payPalEmail.value || null
+    }
+    
+    // Close edit mode
+    cancelEditPayPal()
+    
+  } catch (error) {
+    payPalError.value = error.message || 'Failed to update PayPal email'
+  } finally {
+    savingPayPal.value = false
   }
 }
 
@@ -215,7 +266,7 @@ onMounted(() => {
 
       <!-- Artists Grid -->
       <div v-else class="artists-grid">
-        <div v-for="artist in artists" :key="artist.id" class="artist-card card-clickable">
+        <div v-for="artist in artists" :key="artist.id" class="artist-card">
           <div class="artist-card-header">
             <img 
               v-if="artist.profileImageUrl" 
@@ -241,6 +292,62 @@ onMounted(() => {
               Public Medley
             </span>
           </div>
+
+          <!-- PayPal Section -->
+          <div class="section">
+            <div class="flex flex-between flex-center mb-sm">
+              <label class="form-label m-0">PayPal Email</label>
+              <button 
+                v-if="editingPayPal !== artist.id"
+                @click="startEditPayPal(artist)"
+                class="btn btn-sm btn-outline"
+              >
+                <font-awesome-icon :icon="['fas', 'edit']" />
+                Edit
+              </button>
+            </div>
+            
+            <div v-if="editingPayPal === artist.id" class="form-group">
+              <input
+                v-model="payPalEmail"
+                type="email"
+                class="form-input"
+                :class="{ 'error': payPalError }"
+                placeholder="artist@example.com"
+                :disabled="savingPayPal"
+              />
+              <p v-if="payPalError" class="form-error">{{ payPalError }}</p>
+              <p class="form-hint">PayPal email for receiving payments</p>
+              
+              <div class="flex gap-sm mt-md">
+                <button 
+                  @click="savePayPalEmail(artist)"
+                  class="btn btn-sm btn-primary"
+                  :disabled="savingPayPal"
+                >
+                  <font-awesome-icon v-if="savingPayPal" :icon="['fas', 'spinner']" class="fa-spin mr-sm" />
+                  {{ savingPayPal ? 'Saving...' : 'Save' }}
+                </button>
+                <button 
+                  @click="cancelEditPayPal"
+                  class="btn btn-sm btn-secondary"
+                  :disabled="savingPayPal"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+            
+            <div v-else>
+              <p v-if="artist.paypalEmail" class="text-secondary">
+                {{ artist.paypalEmail }}
+              </p>
+              <p v-else class="text-muted">
+                <font-awesome-icon :icon="['fas', 'exclamation-circle']" />
+                Not configured
+              </p>
+            </div>
+          </div>
           
           <div class="artist-actions">
             <router-link 
@@ -249,13 +356,6 @@ onMounted(() => {
             >
               <font-awesome-icon :icon="['fas', 'music']" />
               Studio
-            </router-link>
-            <router-link 
-              :to="`/artist/${artist.id}/medley`" 
-              class="btn btn-sm btn-outline"
-            >
-              <font-awesome-icon :icon="['fas', 'edit']" />
-              Manage
             </router-link>
             <button 
               v-if="artist.customSlug && artist.hasPublicMedley"
@@ -384,19 +484,6 @@ onMounted(() => {
   gap: var(--spacing-lg);
 }
 
-.artist-card {
-  background: var(--bg-card);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-normal);
-}
-
-.artist-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
 .artist-card-header {
   display: flex;
   gap: var(--spacing-md);
@@ -460,6 +547,7 @@ onMounted(() => {
 .artist-actions {
   display: flex;
   gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
 }
 
 /* Empty State */
@@ -518,8 +606,16 @@ onMounted(() => {
   margin-top: var(--spacing-md);
 }
 
+/* PayPal Edit Form */
+.form-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* Utilities */
 .mr-sm { margin-right: var(--spacing-sm); }
+.m-0 { margin: 0; }
+.mt-md { margin-top: var(--spacing-md); }
 
 .fa-spin {
   animation: fa-spin 1s infinite linear;
