@@ -72,7 +72,8 @@ const trackForm = ref({
   allowDownload: true,
   audioFile: null,
   artworkFile: null,
-  order: 0
+  order: 0,
+  collaborators: []
 })
 
 // Computed
@@ -84,6 +85,14 @@ const isOwnStudio = computed(() => {
 const publicUrl = computed(() => {
   if (!artist.value?.customSlug) return ''
   return `${window.location.origin}/${artist.value.customSlug}`
+})
+
+const totalSplitPercentage = computed(() => {
+  return trackForm.value.collaborators.reduce((sum, collab) => sum + (parseFloat(collab.percentage) || 0), 0)
+})
+
+const isSplitValid = computed(() => {
+  return Math.abs(totalSplitPercentage.value - 100) < 0.01 // Allow for floating point precision
 })
 
 onMounted(async () => {
@@ -495,8 +504,9 @@ const formatDate = (dateString) => {
   }
 }
 
-// Track Management Functions (existing)
+// Track Management Functions
 const addTrack = (index) => {
+  // Initialize with artist as primary collaborator
   trackForm.value = {
     title: '',
     description: '',
@@ -504,7 +514,14 @@ const addTrack = (index) => {
     allowDownload: true,
     audioFile: null,
     artworkFile: null,
-    order: index
+    order: index,
+    collaborators: [{
+      id: Date.now().toString(),
+      name: artist.value.name,
+      email: artist.value.paypalEmail || '',
+      percentage: 100,
+      isPrimary: true
+    }]
   }
   editingTrack.value = null
   showTrackModal.value = true
@@ -518,7 +535,14 @@ const editTrack = (track) => {
     allowDownload: track.allowDownload !== false,
     audioFile: null,
     artworkFile: null,
-    order: track.order
+    order: track.order,
+    collaborators: track.collaborators || [{
+      id: Date.now().toString(),
+      name: artist.value.name,
+      email: artist.value.paypalEmail || '',
+      percentage: 100,
+      isPrimary: true
+    }]
   }
   editingTrack.value = track
   showTrackModal.value = true
@@ -562,6 +586,40 @@ const deleteTrack = async (track) => {
     console.error('Error deleting track:', err)
     alert('Failed to delete track')
   }
+}
+
+// Collaborator management functions
+const addCollaborator = () => {
+  trackForm.value.collaborators.push({
+    id: Date.now().toString(),
+    name: '',
+    email: '',
+    percentage: 0,
+    isPrimary: false
+  })
+}
+
+const removeCollaborator = (index) => {
+  if (trackForm.value.collaborators[index].isPrimary) {
+    modalError.value = 'Cannot remove the primary artist'
+    return
+  }
+  trackForm.value.collaborators.splice(index, 1)
+}
+
+const updateCollaboratorSplit = (index, value) => {
+  const percentage = parseFloat(value) || 0
+  trackForm.value.collaborators[index].percentage = Math.min(100, Math.max(0, percentage))
+}
+
+const autoBalanceSplits = () => {
+  const collabCount = trackForm.value.collaborators.length
+  if (collabCount === 0) return
+  
+  const equalSplit = 100 / collabCount
+  trackForm.value.collaborators.forEach(collab => {
+    collab.percentage = parseFloat(equalSplit.toFixed(2))
+  })
 }
 
 const handleAudioFileSelect = (event) => {
@@ -612,11 +670,33 @@ const uploadFile = async (file, path) => {
 }
 
 const saveTrack = async () => {
-  // Validate
+  // Validate basic fields
   const validation = validateTrackMetadata(trackForm.value)
   if (!validation.isValid) {
     modalError.value = validation.errors.join('. ')
     return
+  }
+  
+  // Validate collaborators
+  if (!isSplitValid.value) {
+    modalError.value = `Royalty splits must add up to 100% (currently ${totalSplitPercentage.value.toFixed(2)}%)`
+    return
+  }
+  
+  // Validate each collaborator
+  for (const collab of trackForm.value.collaborators) {
+    if (!collab.name.trim()) {
+      modalError.value = 'All collaborators must have a name'
+      return
+    }
+    if (!collab.email.trim() || !collab.email.includes('@')) {
+      modalError.value = 'All collaborators must have a valid PayPal email'
+      return
+    }
+    if (collab.percentage <= 0) {
+      modalError.value = 'All collaborators must have a percentage greater than 0'
+      return
+    }
   }
   
   if (!editingTrack.value && (!trackForm.value.audioFile || !trackForm.value.artworkFile)) {
@@ -637,6 +717,12 @@ const saveTrack = async () => {
       order: trackForm.value.order,
       artistId: artist.value.id,
       artistName: artist.value.name,
+      collaborators: trackForm.value.collaborators.map(collab => ({
+        name: collab.name.trim(),
+        email: collab.email.trim(),
+        percentage: parseFloat(collab.percentage),
+        isPrimary: collab.isPrimary || false
+      })),
       updatedAt: serverTimestamp()
     }
     
@@ -694,7 +780,8 @@ const closeModal = () => {
     allowDownload: true,
     audioFile: null,
     artworkFile: null,
-    order: 0
+    order: 0,
+    collaborators: []
   }
   // Clear file inputs
   if (audioFileInput.value) audioFileInput.value.value = ''
@@ -876,6 +963,10 @@ const handleProcessedPhoto = async (processedImageData) => {
                 <div class="track-details">
                   <h3>{{ tracks[index].title }}</h3>
                   <p>${{ tracks[index].price.toFixed(2) }}</p>
+                  <div v-if="tracks[index].collaborators && tracks[index].collaborators.length > 1" class="collaborator-count">
+                    <font-awesome-icon :icon="['fas', 'users']" />
+                    {{ tracks[index].collaborators.length }} collaborators
+                  </div>
                 </div>
                 <button 
                   @click="editTrack(tracks[index])"
@@ -1025,7 +1116,7 @@ const handleProcessedPhoto = async (processedImageData) => {
         </div>
       </div>
 
-      <!-- Add/Edit Track Modal -->
+      <!-- Edit Track Modal -->
       <div v-if="showTrackModal" class="modal-overlay" @click="closeModal">
         <div class="modal modal-lg" @click.stop>
           <div class="modal-header">
@@ -1089,6 +1180,105 @@ const handleProcessedPhoto = async (processedImageData) => {
                 </div>
               </div>
 
+              <!-- Collaborators Section -->
+              <div class="form-section">
+                <div class="section-header-inline">
+                  <h4>
+                    <font-awesome-icon :icon="['fas', 'users']" />
+                    Royalty Splits
+                  </h4>
+                  <button 
+                    type="button" 
+                    @click="autoBalanceSplits" 
+                    class="btn btn-sm btn-secondary"
+                    :disabled="trackForm.collaborators.length === 0"
+                  >
+                    <font-awesome-icon :icon="['fas', 'percentage']" />
+                    Split Equally
+                  </button>
+                </div>
+                
+                <div class="collaborators-list">
+                  <div 
+                    v-for="(collab, index) in trackForm.collaborators" 
+                    :key="collab.id"
+                    class="collaborator-row"
+                    :class="{ 'primary-artist': collab.isPrimary }"
+                  >
+                    <div class="collab-fields">
+                      <div class="form-group">
+                        <input
+                          v-model="collab.name"
+                          type="text"
+                          class="form-input"
+                          placeholder="Name"
+                          :readonly="collab.isPrimary"
+                        />
+                      </div>
+                      
+                      <div class="form-group">
+                        <input
+                          v-model="collab.email"
+                          type="email"
+                          class="form-input"
+                          placeholder="PayPal Email"
+                          :readonly="collab.isPrimary && artist.paypalEmail"
+                        />
+                      </div>
+                      
+                      <div class="form-group percentage-input">
+                        <div class="input-group">
+                          <input
+                            :value="collab.percentage"
+                            @input="updateCollaboratorSplit(index, $event.target.value)"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            class="form-input"
+                            placeholder="0"
+                          />
+                          <span class="input-addon">%</span>
+                        </div>
+                      </div>
+                      
+                      <button
+                        v-if="!collab.isPrimary"
+                        type="button"
+                        @click="removeCollaborator(index)"
+                        class="btn-icon btn-danger"
+                        title="Remove collaborator"
+                      >
+                        <font-awesome-icon :icon="['fas', 'trash']" />
+                      </button>
+                    </div>
+                    
+                    <p v-if="collab.isPrimary" class="form-hint text-primary">
+                      <font-awesome-icon :icon="['fas', 'crown']" />
+                      Primary Artist
+                    </p>
+                  </div>
+                </div>
+                
+                <button 
+                  type="button" 
+                  @click="addCollaborator" 
+                  class="btn btn-secondary btn-sm w-full"
+                >
+                  <font-awesome-icon :icon="['fas', 'plus']" />
+                  Add Collaborator
+                </button>
+                
+                <!-- Split Total -->
+                <div class="split-total" :class="{ 'invalid': !isSplitValid }">
+                  <span>Total Split:</span>
+                  <strong>{{ totalSplitPercentage.toFixed(2) }}%</strong>
+                  <span v-if="!isSplitValid" class="text-danger ml-sm">
+                    (Must equal 100%)
+                  </span>
+                </div>
+              </div>
+
               <!-- Audio File -->
               <div class="form-group">
                 <label class="form-label">
@@ -1129,7 +1319,7 @@ const handleProcessedPhoto = async (processedImageData) => {
                 <button type="button" @click="closeModal" class="btn btn-secondary">
                   Cancel
                 </button>
-                <button type="submit" class="btn btn-primary" :disabled="saving">
+                <button type="submit" class="btn btn-primary" :disabled="saving || !isSplitValid">
                   <font-awesome-icon v-if="saving" :icon="['fas', 'spinner']" class="fa-spin mr-sm" />
                   {{ saving ? 'Saving...' : (editingTrack ? 'Save Changes' : 'Add Track') }}
                 </button>
@@ -1415,6 +1605,15 @@ const handleProcessedPhoto = async (processedImageData) => {
   margin: 0;
 }
 
+.collaborator-count {
+  margin-top: var(--spacing-xs);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
 .btn-edit,
 .btn-delete {
   position: absolute;
@@ -1673,6 +1872,182 @@ const handleProcessedPhoto = async (processedImageData) => {
   border-top: 1px solid var(--border-primary);
 }
 
+/* Collaborators Section */
+.form-section {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-lg);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.section-header-inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.section-header-inline h4 {
+  margin: 0;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.collaborators-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.collaborator-row {
+  background: var(--bg-card);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 2px solid transparent;
+  transition: all var(--transition-normal);
+}
+
+.collaborator-row.primary-artist {
+  border-color: var(--color-primary);
+  background: var(--bg-hover);
+}
+
+.collab-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 120px auto;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+.collab-fields .form-group {
+  margin: 0;
+}
+
+.percentage-input {
+  max-width: 120px;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+}
+
+.input-group .form-input {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.input-addon {
+  padding: var(--spacing-md);
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-left: none;
+  border-top-right-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.btn-icon.btn-danger {
+  background: var(--color-danger);
+  color: white;
+}
+
+.btn-icon.btn-danger:hover {
+  background: var(--color-danger-hover);
+  transform: scale(1.1);
+}
+
+.split-total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-lg);
+  font-size: 1.1rem;
+  border: 2px solid var(--border-primary);
+  transition: all var(--transition-normal);
+}
+
+.split-total.invalid {
+  border-color: var(--color-danger);
+  background: rgba(220, 53, 69, 0.1);
+}
+
+.split-total strong {
+  color: var(--color-primary);
+  font-size: 1.25rem;
+}
+
+.split-total.invalid strong {
+  color: var(--color-danger);
+}
+
+/* Form Elements */
+.form-textarea {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color var(--transition-normal);
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.form-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: var(--spacing-xs);
+}
+
+.form-hint.text-primary {
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+/* Grid Utilities */
+.grid {
+  display: grid;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.gap-md {
+  gap: var(--spacing-md);
+}
+
 /* Checkbox Label */
 .checkbox-label {
   display: flex;
@@ -1719,13 +2094,41 @@ const handleProcessedPhoto = async (processedImageData) => {
   margin-bottom: var(--spacing-lg);
 }
 
+/* Progress Bar */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: var(--border-primary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--color-primary);
+  transition: width var(--transition-normal);
+}
+
 /* Utilities */
 .mt-sm { margin-top: var(--spacing-sm); }
 .mt-md { margin-top: var(--spacing-md); }
 .mr-sm { margin-right: var(--spacing-sm); }
-.gap-md { gap: var(--spacing-md); }
+.ml-sm { margin-left: var(--spacing-sm); }
 .text-center { text-align: center; }
 .text-muted { color: var(--text-muted); }
+.text-danger { color: var(--color-danger); }
+.text-primary { color: var(--color-primary); }
+.w-full { width: 100%; }
+
+.btn-sm {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 0.875rem;
+}
+
+.btn-lg {
+  padding: var(--spacing-md) var(--spacing-xl);
+  font-size: 1.1rem;
+}
 
 /* Animations */
 .fa-spin {
@@ -1771,6 +2174,20 @@ const handleProcessedPhoto = async (processedImageData) => {
   
   .grid-2 {
     grid-template-columns: 1fr;
+  }
+  
+  .collab-fields {
+    grid-template-columns: 1fr;
+  }
+  
+  .percentage-input {
+    max-width: 100%;
+  }
+  
+  .section-header-inline {
+    flex-direction: column;
+    gap: var(--spacing-md);
+    align-items: stretch;
   }
 }
 

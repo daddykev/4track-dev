@@ -101,7 +101,13 @@ exports.createMedleyPayPalOrder = onCall({
         type: 'free_download',
         timestamp: FieldValue.serverTimestamp(),
         userEmail: request.auth?.token?.email || 'anonymous',
-        userId: request.auth?.uid || 'anonymous'
+        userId: request.auth?.uid || 'anonymous',
+        collaborators: track.collaborators || [{
+          name: artist.name,
+          email: artist.paypalEmail,
+          percentage: 100,
+          isPrimary: true
+        }]
       });
       
       // Generate time-limited download URL if track allows download
@@ -130,25 +136,114 @@ exports.createMedleyPayPalOrder = onCall({
       };
     }
     
-    // Create PayPal order with artist as payee
+    // Get collaborators from track or default to primary artist
+    const collaborators = track.collaborators || [{
+      name: artist.name,
+      email: artist.paypalEmail,
+      percentage: 100,
+      isPrimary: true
+    }];
+    
+    // Validate all collaborators have PayPal emails
+    for (const collab of collaborators) {
+      if (!collab.email) {
+        throw new Error(`Collaborator ${collab.name} does not have a PayPal email configured`);
+      }
+    }
+    
+    // Create PayPal order
     const accessToken = await getPayPalAccessToken();
+    
+    // For single collaborator (backward compatibility), use single purchase unit
+    if (collaborators.length === 1) {
+      const orderData = {
+        intent: 'CAPTURE',
+        purchase_units: [{
+          amount: {
+            currency_code: 'USD',
+            value: price.toFixed(2)
+          },
+          payee: {
+            email_address: collaborators[0].email
+          },
+          description: `${track.title} by ${track.artistName || artist.name}`,
+          custom_id: JSON.stringify({
+            trackId: trackId,
+            artistId: artistId
+          })
+        }],
+        application_context: {
+          brand_name: '4track',
+          landing_page: 'NO_PREFERENCE',
+          user_action: 'PAY_NOW',
+          shipping_preference: 'NO_SHIPPING',
+          return_url: `${request.rawRequest.headers.origin}/${artist.customSlug}/success`,
+          cancel_url: `${request.rawRequest.headers.origin}/${artist.customSlug}`
+        }
+      };
+      
+      const response = await axios.post(
+        `${PAYPAL_BASE_URL}/v2/checkout/orders`,
+        orderData,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      return {
+        success: true,
+        orderId: response.data.id,
+        approveUrl: response.data.links.find(link => link.rel === 'approve').href
+      };
+    }
+    
+    // For multiple collaborators, use reference_id to store metadata
+    const purchaseUnits = collaborators.map((collab, index) => {
+      const collabAmount = (price * (collab.percentage / 100)).toFixed(2);
+      
+      // Store metadata in reference_id as base64 encoded JSON
+      const metadata = {
+        trackId,
+        artistId,
+        collaboratorIndex: index,
+        collaboratorName: collab.name,
+        percentage: collab.percentage,
+        isPrimary: collab.isPrimary || false
+      };
+      const referenceId = Buffer.from(JSON.stringify(metadata)).toString('base64');
+      
+      return {
+        reference_id: referenceId, // This will be preserved in capture response
+        amount: {
+          currency_code: 'USD',
+          value: collabAmount
+        },
+        payee: {
+          email_address: collab.email
+        },
+        description: `${track.title} by ${track.artistName || artist.name} - ${collab.name} (${collab.percentage}%)`
+      };
+    });
+    
+    // Verify the sum equals the original price (accounting for rounding)
+    const totalAmount = purchaseUnits.reduce((sum, unit) => sum + parseFloat(unit.amount.value), 0);
+    if (Math.abs(totalAmount - price) > 0.01) {
+      console.error('Split calculation error:', { price, totalAmount, difference: totalAmount - price });
+      // Adjust the primary artist's amount to account for rounding
+      const primaryIndex = collaborators.findIndex(c => c.isPrimary);
+      if (primaryIndex !== -1) {
+        const adjustment = (price - totalAmount).toFixed(2);
+        const currentAmount = parseFloat(purchaseUnits[primaryIndex].amount.value);
+        purchaseUnits[primaryIndex].amount.value = (currentAmount + parseFloat(adjustment)).toFixed(2);
+      }
+    }
     
     const orderData = {
       intent: 'CAPTURE',
-      purchase_units: [{
-        amount: {
-          currency_code: 'USD',
-          value: price.toFixed(2)
-        },
-        payee: {
-          email_address: artist.paypalEmail // Direct payment to artist
-        },
-        description: `${track.title} by ${track.artistName || artist.name}`,
-        custom_id: JSON.stringify({
-          trackId: trackId,
-          artistId: artistId
-        })
-      }],
+      purchase_units: purchaseUnits,
       application_context: {
         brand_name: '4track',
         landing_page: 'NO_PREFERENCE',
@@ -158,6 +253,12 @@ exports.createMedleyPayPalOrder = onCall({
         cancel_url: `${request.rawRequest.headers.origin}/${artist.customSlug}`
       }
     };
+    
+    console.log('Creating PayPal order with splits:', {
+      trackId,
+      totalAmount: price,
+      splits: collaborators.map(c => ({ name: c.name, percentage: c.percentage }))
+    });
     
     const response = await axios.post(
       `${PAYPAL_BASE_URL}/v2/checkout/orders`,
@@ -182,7 +283,8 @@ exports.createMedleyPayPalOrder = onCall({
   }
 });
 
-// Capture PayPal payment and record royalties
+// Update the captureMedleyPayment function to handle reference_id
+// Update the captureMedleyPayment function to handle partial captures
 exports.captureMedleyPayment = onCall({
   secrets: [PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET],
   cors: true
@@ -211,20 +313,54 @@ exports.captureMedleyPayment = onCall({
     );
     
     const captureData = captureResponse.data;
-    const purchaseUnit = captureData.purchase_units[0];
-    const capture = purchaseUnit.payments.captures[0];
-    const customId = capture.custom_id;
+    console.log('PayPal capture response status:', captureData.status);
     
-    // Parse the custom_id which contains our track and artist IDs
+    // Check if payment was at least partially successful
+    if (captureData.status !== 'COMPLETED' && captureData.status !== 'PARTIALLY_COMPLETED') {
+      throw new Error(`Payment failed with status: ${captureData.status}`);
+    }
+    
+    // Find the first purchase unit with a successful capture
     let trackId, artistId;
-    try {
-      const customData = JSON.parse(customId);
+    let successfulCapture = null;
+    let purchaseUnitWithCapture = null;
+    
+    for (const purchaseUnit of captureData.purchase_units) {
+      if (purchaseUnit.payments && purchaseUnit.payments.captures && purchaseUnit.payments.captures.length > 0) {
+        const capture = purchaseUnit.payments.captures[0];
+        if (capture.status === 'COMPLETED') {
+          successfulCapture = capture;
+          purchaseUnitWithCapture = purchaseUnit;
+          break;
+        }
+      }
+    }
+    
+    if (!successfulCapture) {
+      console.error('No successful captures found in response');
+      throw new Error('Payment could not be processed. Please try again.');
+    }
+    
+    console.log('Found successful capture:', successfulCapture.id);
+    
+    // Extract metadata from either custom_id or reference_id
+    if (successfulCapture.custom_id) {
+      // Single payee - parse custom_id
+      const customData = JSON.parse(successfulCapture.custom_id);
       trackId = customData.trackId;
       artistId = customData.artistId;
-    } catch (parseError) {
-      console.error('Error parsing custom_id:', parseError);
-      throw new Error('Invalid order data');
+    } else if (purchaseUnitWithCapture.reference_id) {
+      // Multiple payees - decode reference_id
+      const decodedRef = Buffer.from(purchaseUnitWithCapture.reference_id, 'base64').toString('utf8');
+      const metadata = JSON.parse(decodedRef);
+      trackId = metadata.trackId;
+      artistId = metadata.artistId;
+    } else {
+      console.error('No custom_id or reference_id found in capture response');
+      throw new Error('Missing transaction metadata');
     }
+    
+    console.log('Track ID:', trackId, 'Artist ID:', artistId);
     
     // Get track details
     const trackDoc = await db.collection('medleyTracks').doc(trackId).get();
@@ -235,46 +371,94 @@ exports.captureMedleyPayment = onCall({
     
     const track = trackDoc.data();
     
-    // Get artist details to record their PayPal email
+    // Get artist details
     const artistDoc = await db.collection('artistProfiles').doc(artistId).get();
     const artist = artistDoc.exists ? artistDoc.data() : {};
     
-    // IMPORTANT: Use the authenticated user's email as the payer
-    // This is what MusicCollection.vue queries for
+    // Process payment details
     const buyerEmail = request.auth?.token?.email || captureData.payer?.email_address || null;
     const buyerId = request.auth?.uid || null;
     
-    // Record the transaction
-    const royaltyDoc = await db.collection('medleyRoyalties').add({
+    // Collect all successful captures
+    const successfulCaptures = [];
+    let totalCapturedAmount = 0;
+    
+    for (const unit of captureData.purchase_units) {
+      if (unit.payments?.captures?.length > 0) {
+        for (const capture of unit.payments.captures) {
+          if (capture.status === 'COMPLETED') {
+            let metadata = null;
+            if (unit.reference_id) {
+              const decodedRef = Buffer.from(unit.reference_id, 'base64').toString('utf8');
+              metadata = JSON.parse(decodedRef);
+            }
+            
+            successfulCaptures.push({
+              capture,
+              metadata,
+              amount: parseFloat(capture.amount.value)
+            });
+            
+            totalCapturedAmount += parseFloat(capture.amount.value);
+          }
+        }
+      }
+    }
+    
+    console.log(`Successfully captured ${successfulCaptures.length} payments, total: $${totalCapturedAmount}`);
+    
+    // Build royalty record
+    const royaltyData = {
       trackId,
       artistId: artistId || track.artistId,
       trackTitle: track.title,
       orderId,
-      paypalTransactionId: capture.id,
-      amount: parseFloat(capture.amount.value),
-      currency: capture.amount.currency_code,
-      status: capture.status,
+      amount: totalCapturedAmount,
+      currency: 'USD',
+      status: captureData.status,
       type: 'purchase',
       timestamp: FieldValue.serverTimestamp(),
-      // Buyer information (this is what MusicCollection queries)
-      payerEmail: buyerEmail, // The authenticated user who bought the track
+      payerEmail: buyerEmail,
       payerId: captureData.payer?.payer_id || buyerId,
-      userId: buyerId, // Firebase user ID of the buyer
-      // Artist payment information
-      artistPayPalEmail: artist.paypalEmail || purchaseUnit.payee?.email_address,
-      // Store fee information
-      grossAmount: parseFloat(capture.seller_receivable_breakdown.gross_amount.value),
-      paypalFee: parseFloat(capture.seller_receivable_breakdown.paypal_fee.value),
-      netAmount: parseFloat(capture.seller_receivable_breakdown.net_amount.value)
-    });
-    
-    console.log('Royalty recorded:', {
-      royaltyId: royaltyDoc.id,
-      buyerEmail: buyerEmail,
+      userId: buyerId,
       artistPayPalEmail: artist.paypalEmail
-    });
+    };
     
-    // Generate secure download URL if download is allowed
+    // Add details based on number of captures
+    if (successfulCaptures.length === 1) {
+      // Single capture (backward compatible)
+      royaltyData.paypalTransactionId = successfulCaptures[0].capture.id;
+    } else {
+      // Multiple captures
+      royaltyData.collaboratorPayments = successfulCaptures.map(sc => ({
+        name: sc.metadata?.collaboratorName || 'Unknown',
+        percentage: sc.metadata?.percentage || 0,
+        amount: sc.amount,
+        transactionId: sc.capture.id,
+        status: sc.capture.status,
+        isPrimary: sc.metadata?.isPrimary || false
+      }));
+    }
+    
+    // Save collaborators from track data
+    royaltyData.collaborators = track.collaborators || [{
+      name: artist.name,
+      email: artist.paypalEmail,
+      percentage: 100,
+      isPrimary: true
+    }];
+    
+    // Note if payment was partial
+    if (captureData.status === 'PARTIALLY_COMPLETED') {
+      royaltyData.notes = 'Some collaborator payments may have failed. Check PayPal for details.';
+      console.warn('Payment was partially completed. Some collaborators may not have received payment.');
+    }
+    
+    console.log('Recording royalty...');
+    const royaltyDoc = await db.collection('medleyRoyalties').add(royaltyData);
+    console.log('Royalty recorded:', royaltyDoc.id);
+    
+    // Generate download URL if allowed
     let downloadUrl = null;
     if (track.allowDownload !== false && track.audioPath) {
       try {
@@ -288,12 +472,9 @@ exports.captureMedleyPayment = onCall({
           });
           downloadUrl = url;
           console.log('Download URL generated');
-        } else {
-          console.warn('Audio file not found in storage:', track.audioPath);
         }
       } catch (urlError) {
         console.error('Error generating download URL:', urlError);
-        // Continue without download URL rather than failing the whole transaction
       }
     }
     
@@ -305,14 +486,19 @@ exports.captureMedleyPayment = onCall({
     };
     
   } catch (error) {
-    console.error('Error capturing payment:', error.response?.data || error);
+    console.error('Error capturing payment:', error);
+    console.error('Error stack:', error.stack);
+    
+    if (error.response) {
+      console.error('PayPal API error:', error.response.data);
+    }
     
     if (error.response?.data?.name === 'RESOURCE_NOT_FOUND') {
       throw new Error('Payment order not found. It may have already been processed.');
     } else if (error.response?.data?.name === 'ORDER_ALREADY_CAPTURED') {
       throw new Error('This payment has already been processed.');
     } else {
-      throw new Error(error.response?.data?.message || error.message || 'Failed to process payment');
+      throw new Error(error.message || 'Failed to process payment');
     }
   }
 });

@@ -836,6 +836,15 @@ watch(() => currentUser.value, async (newUser) => {
                 <span class="track-artist">{{ track.artistName || artist?.name }}</span>
                 <span class="track-duration">{{ formatDuration(track.duration) }}</span>
               </div>
+              <div v-if="track.collaborators && track.collaborators.length > 1" class="track-collaborators">
+                <span class="collab-label">feat.</span>
+                <span class="collab-names">
+                  {{ track.collaborators
+                      .filter(c => !c.isPrimary)
+                      .map(c => c.name)
+                      .join(', ') }}
+                </span>
+              </div>
             </div>
             
             <div class="track-item-actions">
@@ -1540,6 +1549,23 @@ watch(() => currentUser.value, async (newUser) => {
 
 .close-btn:hover {
   color: #ffffff;
+}
+
+.track-collaborators {
+  margin-top: var(--spacing-xs);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.collab-label {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.collab-names {
+  color: var(--text-primary);
 }
 
 /* Loading & Error States */
