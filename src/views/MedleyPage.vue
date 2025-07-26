@@ -2,11 +2,11 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { db, auth } from '@/firebase'
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { apiService } from '@/services/api'
-import SessionMeters from '@/components/SessionMeters.vue'
-import SessionSpectroscope from '@/components/SessionSpectroscope.vue'
+import AudioMeters from '@/components/AudioMeters.vue'
+import AudioRTA from '@/components/AudioRTA.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -722,7 +722,7 @@ watch(() => currentUser.value, async (newUser) => {
 
           <!-- Audio Visualizations Row -->
           <div class="audio-visualizations-row">
-            <SessionSpectroscope 
+            <AudioRTA 
               :analyser-node="spectroscopeAnalyser"
               :is-playing="isPlaying"
             />
@@ -750,7 +750,7 @@ watch(() => currentUser.value, async (newUser) => {
               </div>
             </div>
             
-            <SessionMeters
+            <AudioMeters
               :left-analyser-node="leftMetersAnalyser"
               :right-analyser-node="rightMetersAnalyser"
               :is-playing="isPlaying"

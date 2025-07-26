@@ -48,11 +48,11 @@ fourtrack-os/
 │   │   └── themes.css          # CSS custom properties
 │   │
 │   ├── components/             # Reusable Vue components
+│   │   ├── AudioMeters.vue     # RMS and peak volume meters
+│   │   ├── AudioRTA.vue        # Frequency analyzer
 │   │   ├── CustomIcon.vue      # Reusable component for rendering SVG icons
 │   │   ├── NavBar.vue          # Main navigation
 │   │   ├── PhotoLab.vue        # Photo editing modal with filters
-│   │   ├── SessionMeters.vue   # Audio level meters
-│   │   ├── SessionSpectroscope.vue # Frequency analyzer
 │   │   └── EmailVerificationBanner.vue # Email verification reminder
 │   │
 │   ├── composables/            # Vue composables
