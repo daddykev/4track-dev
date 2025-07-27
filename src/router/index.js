@@ -122,30 +122,40 @@ const router = createRouter({
 let isAuthenticated = false
 let authStateResolved = false
 let userData = null
+let userDataLoaded = false
+
+// Function to load user data
+const loadUserData = async (user) => {
+  if (!user) {
+    userData = null
+    userDataLoaded = true
+    return
+  }
+
+  try {
+    const userQuery = query(
+      collection(db, 'users'),
+      where('uid', '==', user.uid)
+    )
+    const userSnapshot = await getDocs(userQuery)
+    
+    if (!userSnapshot.empty) {
+      userData = userSnapshot.docs[0].data()
+    }
+  } catch (error) {
+    console.error('Error loading user data in router:', error)
+  } finally {
+    userDataLoaded = true
+  }
+}
 
 // Set up auth state listener
 onAuthStateChanged(auth, async (user) => {
   isAuthenticated = !!user
   authStateResolved = true
   
-  // Load user data if authenticated
-  if (user) {
-    try {
-      const userQuery = query(
-        collection(db, 'users'),
-        where('uid', '==', user.uid)
-      )
-      const userSnapshot = await getDocs(userQuery)
-      
-      if (!userSnapshot.empty) {
-        userData = userSnapshot.docs[0].data()
-      }
-    } catch (error) {
-      console.error('Error loading user data in router:', error)
-    }
-  } else {
-    userData = null
-  }
+  // Load user data
+  await loadUserData(user)
 })
 
 // Navigation guard for auth-required routes
@@ -169,10 +179,26 @@ router.beforeEach(async (to, from, next) => {
     
     if (!isAuthenticated) {
       next({ name: 'login', query: { return: to.fullPath } })
-    } else if (to.meta.requiresArtist && userData?.userType !== 'artist') {
+      return
+    }
+    
+    // Wait for user data to be loaded if we need to check permissions
+    if ((to.meta.requiresArtist || to.meta.requiresRosterAccess || to.meta.requiresAdmin) && !userDataLoaded) {
+      // Re-load user data if needed
+      const user = auth.currentUser
+      if (user && !userData) {
+        await loadUserData(user)
+      }
+    }
+    
+    // Now check specific permissions
+    if (to.meta.requiresArtist && userData?.userType !== 'artist') {
       next({ name: 'create-artist' })
     } else if (to.meta.requiresRosterAccess && !['admin', 'label', 'manager'].includes(userData?.userType)) {
       // Redirect non-authorized users
+      next({ name: 'discover' })
+    } else if (to.meta.requiresAdmin && userData?.userType !== 'admin') {
+      // Redirect non-admin users
       next({ name: 'discover' })
     } else {
       next()

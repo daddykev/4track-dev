@@ -215,6 +215,16 @@ const viewPublicPage = (artist) => {
   window.open(`/${artist.customSlug}`, '_blank')
 }
 
+// Helper to get badge class based on role
+const getBadgeClass = (role) => {
+  const roleClasses = {
+    'admin': 'badge-danger',
+    'label': 'badge-primary', 
+    'manager': 'badge-warning'
+  }
+  return roleClasses[role] || 'badge-secondary'
+}
+
 // Lifecycle
 onMounted(() => {
   loadData()
@@ -226,7 +236,7 @@ onMounted(() => {
     <div class="page-container">
       <div class="page-header">
         <h1 class="page-title">
-          <font-awesome-icon :icon="['fas', 'users']" class="mr-sm" />
+          <font-awesome-icon :icon="['fas', 'users']" />
           Artist Roster
         </h1>
         <button @click="showCreateModal = true" class="btn btn-primary">
@@ -237,11 +247,11 @@ onMounted(() => {
 
       <!-- Stats Summary -->
       <div class="stats-row">
-        <div class="stat-item">
+        <div class="stat-card">
           <div class="stat-value">{{ artists.length }}</div>
           <div class="stat-label">Total Artists</div>
         </div>
-        <div v-if="isAdmin" class="stat-item">
+        <div v-if="isAdmin" class="stat-card">
           <div class="stat-value">{{ platformStats.total }}</div>
           <div class="stat-label">Platform Total</div>
         </div>
@@ -250,14 +260,16 @@ onMounted(() => {
       <!-- Loading State -->
       <div v-if="loading" class="loading-container">
         <div class="loading-spinner"></div>
-        <p>Loading artists...</p>
+        <p class="text-secondary">Loading artists...</p>
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="artists.length === 0" class="empty-state">
+      <div v-else-if="artists.length === 0" class="empty-state card">
         <font-awesome-icon :icon="['fas', 'music']" class="empty-icon" />
         <h3>No Artists Yet</h3>
-        <p>{{ isAdmin ? 'No artists have been created on the platform.' : 'You don\'t have access to any artists yet.' }}</p>
+        <p class="text-secondary mb-lg">
+          {{ isAdmin ? 'No artists have been created on the platform.' : 'You don\'t have access to any artists yet.' }}
+        </p>
         <button @click="showCreateModal = true" class="btn btn-primary">
           <font-awesome-icon :icon="['fas', 'plus']" />
           Create Your First Artist
@@ -266,25 +278,25 @@ onMounted(() => {
 
       <!-- Artists Grid -->
       <div v-else class="artists-grid">
-        <div v-for="artist in artists" :key="artist.id" class="artist-card">
-          <div class="artist-card-header">
+        <div v-for="artist in artists" :key="artist.id" class="card">
+          <div class="artist-header">
             <img 
               v-if="artist.profileImageUrl" 
               :src="artist.profileImageUrl" 
               :alt="artist.name"
-              class="artist-image"
+              class="artist-avatar"
             />
-            <div v-else class="artist-image-placeholder">
+            <div v-else class="artist-avatar-placeholder">
               <font-awesome-icon :icon="['fas', 'user']" />
             </div>
             <div class="artist-info">
               <h3 class="artist-name">{{ artist.name }}</h3>
-              <p class="artist-genre">{{ artist.genre || 'Independent Artist' }}</p>
+              <p class="artist-genre text-secondary">{{ artist.genre || 'Independent Artist' }}</p>
             </div>
           </div>
           
-          <div class="artist-meta">
-            <span class="badge" :class="`badge-${artist.role}`">
+          <div class="badges-row">
+            <span class="badge" :class="getBadgeClass(artist.role)">
               {{ getRoleLabel(artist.role) }}
             </span>
             <span v-if="artist.hasPublicMedley" class="badge badge-success">
@@ -294,20 +306,20 @@ onMounted(() => {
           </div>
 
           <!-- PayPal Section -->
-          <div class="section">
-            <div class="flex flex-between flex-center mb-sm">
-              <label class="form-label m-0">PayPal Email</label>
+          <div class="paypal-section">
+            <div class="paypal-header">
+              <label class="form-label">PayPal Email</label>
               <button 
                 v-if="editingPayPal !== artist.id"
                 @click="startEditPayPal(artist)"
-                class="btn btn-sm btn-outline"
+                class="btn-icon-sm"
               >
                 <font-awesome-icon :icon="['fas', 'edit']" />
                 Edit
               </button>
             </div>
             
-            <div v-if="editingPayPal === artist.id" class="form-group">
+            <div v-if="editingPayPal === artist.id">
               <input
                 v-model="payPalEmail"
                 type="email"
@@ -316,16 +328,16 @@ onMounted(() => {
                 placeholder="artist@example.com"
                 :disabled="savingPayPal"
               />
-              <p v-if="payPalError" class="form-error">{{ payPalError }}</p>
-              <p class="form-hint">PayPal email for receiving payments</p>
+              <p v-if="payPalError" class="error-text">{{ payPalError }}</p>
+              <p class="help-text">PayPal email for receiving payments</p>
               
-              <div class="flex gap-sm mt-md">
+              <div class="edit-actions">
                 <button 
                   @click="savePayPalEmail(artist)"
                   class="btn btn-sm btn-primary"
                   :disabled="savingPayPal"
                 >
-                  <font-awesome-icon v-if="savingPayPal" :icon="['fas', 'spinner']" class="fa-spin mr-sm" />
+                  <font-awesome-icon v-if="savingPayPal" :icon="['fas', 'spinner']" class="fa-spin" />
                   {{ savingPayPal ? 'Saving...' : 'Save' }}
                 </button>
                 <button 
@@ -339,7 +351,7 @@ onMounted(() => {
             </div>
             
             <div v-else>
-              <p v-if="artist.paypalEmail" class="text-secondary">
+              <p v-if="artist.paypalEmail" class="paypal-email">
                 {{ artist.paypalEmail }}
               </p>
               <p v-else class="text-muted">
@@ -352,7 +364,7 @@ onMounted(() => {
           <div class="artist-actions">
             <router-link 
               :to="`/studio/${artist.id}`" 
-              class="btn btn-sm btn-primary"
+              class="btn btn-primary"
             >
               <font-awesome-icon :icon="['fas', 'music']" />
               Studio
@@ -360,7 +372,7 @@ onMounted(() => {
             <button 
               v-if="artist.customSlug && artist.hasPublicMedley"
               @click="viewPublicPage(artist)" 
-              class="btn btn-sm btn-secondary"
+              class="btn btn-secondary"
             >
               <font-awesome-icon :icon="['fas', 'external-link-alt']" />
               View
@@ -389,7 +401,7 @@ onMounted(() => {
                 placeholder="Enter artist name"
                 required
               />
-              <p class="form-hint">This will be their public display name</p>
+              <p class="help-text">This will be their public display name</p>
             </div>
 
             <div class="form-group">
@@ -400,27 +412,27 @@ onMounted(() => {
                 class="form-input"
                 placeholder="https://open.spotify.com/artist/..."
               />
-              <p class="form-hint">Optional: Import artist data from Spotify</p>
+              <p class="help-text">Optional: Import artist data from Spotify</p>
             </div>
 
             <div v-if="createError" class="error-message">
               {{ createError }}
             </div>
+
+            <div class="modal-footer">
+              <button type="button" @click="closeCreateModal" class="btn btn-secondary">
+                Cancel
+              </button>
+              <button 
+                type="submit"
+                class="btn btn-primary"
+                :disabled="creating || !newArtist.name"
+              >
+                <font-awesome-icon v-if="creating" :icon="['fas', 'spinner']" class="fa-spin" />
+                {{ creating ? 'Creating...' : 'Create Artist' }}
+              </button>
+            </div>
           </form>
-          
-          <div class="modal-footer">
-            <button @click="closeCreateModal" class="btn btn-secondary">
-              Cancel
-            </button>
-            <button 
-              @click="createArtist" 
-              class="btn btn-primary"
-              :disabled="creating || !newArtist.name"
-            >
-              <font-awesome-icon v-if="creating" :icon="['fas', 'spinner']" class="fa-spin mr-sm" />
-              {{ creating ? 'Creating...' : 'Create Artist' }}
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -443,6 +455,7 @@ onMounted(() => {
 .page-title {
   display: flex;
   align-items: center;
+  gap: var(--spacing-sm);
   font-size: 2rem;
   color: var(--text-primary);
   margin: 0;
@@ -455,10 +468,10 @@ onMounted(() => {
   margin-bottom: var(--spacing-2xl);
 }
 
-.stat-item {
+.stat-card {
   background: var(--bg-card);
   padding: var(--spacing-lg);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   text-align: center;
   min-width: 150px;
@@ -472,32 +485,34 @@ onMounted(() => {
 
 .stat-label {
   color: var(--text-secondary);
-  font-size: var(--font-sm);
+  font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-top: var(--spacing-xs);
 }
 
-/* Artists Grid */
+/* Artists Grid - with proper gap */
 .artists-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: var(--spacing-lg);
 }
 
-.artist-card-header {
+/* Artist Card Styling */
+.artist-header {
   display: flex;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
 }
 
-.artist-image {
+.artist-avatar {
   width: 60px;
   height: 60px;
   border-radius: var(--radius-full);
   object-fit: cover;
 }
 
-.artist-image-placeholder {
+.artist-avatar-placeholder {
   width: 60px;
   height: 60px;
   border-radius: var(--radius-full);
@@ -517,43 +532,96 @@ onMounted(() => {
   margin: 0;
   color: var(--text-primary);
   font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .artist-genre {
   margin: var(--spacing-xs) 0 0 0;
-  color: var(--text-secondary);
-  font-size: var(--font-sm);
+  font-size: 0.875rem;
 }
 
-.artist-meta {
+/* Badges Row */
+.badges-row {
   display: flex;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
+  min-height: 24px;
 }
 
-.badge-admin {
-  background: var(--color-danger);
+/* PayPal Section */
+.paypal-section {
+  padding: var(--spacing-md) 0;
+  border-top: 1px solid var(--border-primary);
+  border-bottom: 1px solid var(--border-primary);
+  margin-bottom: var(--spacing-md);
 }
 
-.badge-label {
-  background: var(--color-primary);
+.paypal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
 }
 
-.badge-manager {
-  background: var(--color-warning);
-  color: var(--text-primary);
+.paypal-header .form-label {
+  margin: 0;
+}
+
+.btn-icon-sm {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  transition: color var(--transition-fast);
+}
+
+.btn-icon-sm:hover {
+  color: var(--color-primary);
+}
+
+.paypal-email {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.help-text {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: var(--spacing-xs);
+}
+
+.error-text {
+  font-size: 0.875rem;
+  color: var(--color-danger);
+  margin-top: var(--spacing-xs);
+}
+
+.edit-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
 }
 
 .artist-actions {
   display: flex;
   gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
+}
+
+.artist-actions .btn {
+  flex: 1;
 }
 
 /* Empty State */
 .empty-state {
   text-align: center;
   padding: var(--spacing-3xl);
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .empty-icon {
@@ -568,55 +636,17 @@ onMounted(() => {
   margin-bottom: var(--spacing-sm);
 }
 
-.empty-state p {
-  color: var(--text-secondary);
-  margin-bottom: var(--spacing-xl);
-}
-
-/* Loading */
-.loading-container {
+/* Modal Footer */
+.modal-footer {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 40vh;
-  gap: var(--spacing-md);
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--border-primary);
 }
 
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--border-primary);
-  border-top: 3px solid var(--color-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Error Message */
-.error-message {
-  background: rgba(220, 53, 69, 0.1);
-  color: var(--color-danger);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  margin-top: var(--spacing-md);
-}
-
-/* PayPal Edit Form */
-.form-input:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-/* Utilities */
-.mr-sm { margin-right: var(--spacing-sm); }
-.m-0 { margin: 0; }
-.mt-md { margin-top: var(--spacing-md); }
-
+/* Animation */
 .fa-spin {
   animation: fa-spin 1s infinite linear;
 }
@@ -636,18 +666,11 @@ onMounted(() => {
   
   .stats-row {
     justify-content: center;
+    flex-wrap: wrap;
   }
   
   .artists-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .artist-actions {
-    width: 100%;
-  }
-  
-  .artist-actions .btn {
-    flex: 1;
   }
 }
 </style>
