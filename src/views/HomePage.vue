@@ -132,13 +132,13 @@ onMounted(() => {
               <font-awesome-icon icon="fa-solid fa-percentage" />
             </div>
             <h3>Royalty Splits</h3>
-            <p>Automatically split payments between collaborators. Define percentages for featured artists, producers, and contributors. PayPal handles multi-party payouts instantly.</p>
+            <p>Assign percentages for featured artists, producers, managers, and other stakeholders. PayPal handles multi-party payouts instantly.</p>
           </div>
           <div class="industry-card">
             <div class="industry-icon">
               <font-awesome-icon icon="fa-solid fa-users" />
             </div>
-            <h3>Label & Manager Access</h3>
+            <h3>Team Access</h3>
             <p>Hierarchical permissions for teams. Labels can manage entire rosters. Managers access assigned artists. Everyone sees only what they need.</p>
           </div>
           <div class="industry-card">
@@ -147,35 +147,6 @@ onMounted(() => {
             </div>
             <h3>Artist Roster Management</h3>
             <p>Centralized dashboard for multi-artist operations. Create profiles, manage releases, track analytics. Built for modern music businesses.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="philosophy-section">
-      <div class="container">
-        <div class="philosophy-content card">
-          <h2 class="text-center mb-lg">
-            <font-awesome-icon icon="fa-solid fa-users" />
-            Why We Built 4track
-          </h2>
-          <div class="philosophy-grid">
-            <div class="philosophy-item">
-              <h3 class="text-primary">Artist-First</h3>
-              <p>No platform fees on sales. Artists set their own prices. Direct relationships with fans.</p>
-            </div>
-            <div class="philosophy-item">
-              <h3 class="text-primary">Privacy-First</h3>
-              <p>No cookies, no tracking, minimal data collection. GDPR and CCPA compliant by design.</p>
-            </div>
-            <div class="philosophy-item">
-              <h3 class="text-primary">Community-Driven</h3>
-              <p>Open source means transparency. Fork it, improve it, make it yours. Join our mission.</p>
-            </div>
-            <div class="philosophy-item">
-              <h3 class="text-primary">Free Forever</h3>
-              <p>Core features will always be free. No paywalls between artists and their audience.</p>
-            </div>
           </div>
         </div>
       </div>
@@ -491,34 +462,6 @@ onMounted(() => {
 .industry-card p {
   color: var(--text-secondary);
   line-height: 1.6;
-}
-
-/* Philosophy Section */
-.philosophy-section {
-  padding: 4rem 0;
-  background-color: var(--bg-primary);
-}
-
-.philosophy-content {
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-.philosophy-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--spacing-xl);
-}
-
-.philosophy-item h3 {
-  margin-bottom: var(--spacing-sm);
-  font-size: 1.1rem;
-}
-
-.philosophy-item p {
-  color: var(--text-secondary);
-  line-height: 1.6;
-  font-size: 0.95rem;
 }
 
 /* GitHub row */

@@ -36,7 +36,6 @@
 ### 📊 For Labels & Managers
 - **Artist Roster** - Manage multiple artists from one dashboard
 - **Hierarchical Access** - Role-based permissions system
-- **Bulk Operations** - Streamlined catalog management
 - **Aggregated Analytics** - Revenue and engagement across all artists
 
 ## 🛠 Tech Stack
@@ -44,8 +43,6 @@
 **Frontend**
 - Vue 3 (Composition API) + Vite
 - CSS utility-first architecture
-- FontAwesome 7 icons
-- Pixels.js for photo editing
 
 **Backend**
 - Firebase (Firestore, Auth, Functions, Storage)
@@ -53,11 +50,10 @@
 - Privacy-first analytics
 
 **Key Features**
-- Zero tracking cookies
-- GDPR/CCPA compliant
-- Email verification required
 - Direct artist payouts with automatic splits
 - Self-hostable
+- Zero tracking cookies
+- GDPR/CCPA compliant
 
 ## 🚀 Getting Started
 
@@ -65,7 +61,7 @@
 
 - Node.js 16+ and npm
 - Firebase project
-- PayPal Developer account (Business account required for split payments)
+- PayPal account
 
 ### Installation
 
@@ -136,7 +132,7 @@ fourtrack-os/
 │   └── router/          # Route configuration
 ├── functions/           # Firebase Cloud Functions
 ├── public/              # Static assets
-└── docs/               # Documentation
+└── docs/                # Documentation
 ```
 
 ## 🎨 CSS Architecture
@@ -260,11 +256,10 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - ✅ Collaborator royalty splits
 
 ### Version 1.0 (Public Launch)
-- 🔄 iOS app (SwiftUI)
 - 🔄 API for third-party integrations
 
 ### Version 2.0 (Future)
-- 🔮 Advanced analytics dashboard
+- 🔮 iOS app (SwiftUI)
 - 🔮 Multi-language support
 - 🔮 Live streaming capabilities
 
