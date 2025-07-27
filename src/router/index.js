@@ -18,6 +18,8 @@ import AdminUsers from '../views/AdminUsers.vue'
 import AdminArtists from '../views/AdminArtists.vue'
 import ArtistRoster from '../views/ArtistRoster.vue'
 import AdminInviteCodes from '../views/AdminInviteCodes.vue'
+import PrivacyPolicy from '../views/PrivacyPolicy.vue'
+import TermsOfService from '../views/TermsOfService.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -79,6 +81,18 @@ const router = createRouter({
         requiresAuth: true,
         requiresRosterAccess: true 
       }
+    },
+    {
+      path: '/privacy',
+      name: 'privacy',
+      component: PrivacyPolicy,
+      meta: { title: 'Privacy Policy - 4track' }
+    },
+    {
+      path: '/terms',
+      name: 'terms',
+      component: TermsOfService,
+      meta: { title: 'Terms of Service - 4track' }
     },
     {
       path: '/:artistSlug',

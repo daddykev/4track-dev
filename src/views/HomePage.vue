@@ -178,6 +178,57 @@ onMounted(() => {
         </div>
       </div>
     </section>
+
+    <footer class="footer-section">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-main">
+            <div class="footer-brand">
+              <h3 class="footer-logo">
+                4track
+                <CustomIcon name="cassetteTape" class="footer-icon" />
+              </h3>
+              <p class="footer-tagline">Open source music platform</p>
+            </div>
+            
+            <div class="footer-links">
+              <div class="footer-column">
+                <h4>Platform</h4>
+                <router-link to="/discover">Discover</router-link>
+                <router-link to="/artist/create">Early Artist Access</router-link>
+                <router-link to="/signup">Sign Up</router-link>
+              </div>
+              
+              <div class="footer-column">
+                <h4>Resources</h4>
+                <a href="https://github.com/daddykev/4track-dev" target="_blank" rel="noopener noreferrer">
+                  <font-awesome-icon :icon="['fab', 'github']" /> Source Code
+                </a>
+                <a href="https://github.com/daddykev/4track-dev/issues" target="_blank" rel="noopener noreferrer">
+                  Report Issues
+                </a>
+                <a href="https://github.com/daddykev/4track-dev/wiki" target="_blank" rel="noopener noreferrer">
+                  Documentation
+                </a>
+              </div>
+              
+              <div class="footer-column">
+                <h4>Legal</h4>
+                <router-link to="/privacy">Privacy Policy</router-link>
+                <router-link to="/terms">Terms of Service</router-link>
+                <a href="mailto:legal@4track.io">Contact</a>
+              </div>
+            </div>
+          </div>
+          
+          <div class="footer-bottom">
+            <p>&copy; 2025 4track. Released under MIT License.</p>
+            <p class="footer-note">100% of payments go directly to artists</p>
+          </div>
+        </div>
+      </div>
+    </footer>
+
   </div>
 </template>
 
@@ -551,6 +602,104 @@ onMounted(() => {
   color: var(--color-primary);
 }
 
+/* Footer Section */
+.footer-section {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-primary);
+  padding: var(--spacing-2xl) 0 var(--spacing-xl);
+  margin-top: 0;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xl);
+}
+
+.footer-main {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: var(--spacing-2xl);
+  align-items: start;
+}
+
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.footer-logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.footer-icon {
+  color: var(--color-primary);
+  font-size: 1.2em;
+}
+
+.footer-tagline {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  margin: 0;
+}
+
+.footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xl);
+}
+
+.footer-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.footer-column h4 {
+  color: var(--text-primary);
+  font-size: var(--font-base);
+  font-weight: 600;
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.footer-column a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: var(--font-sm);
+  transition: color var(--transition-normal);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.footer-column a:hover {
+  color: var(--color-primary);
+}
+
+.footer-bottom {
+  text-align: center;
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+.footer-bottom p {
+  margin: var(--spacing-xs) 0;
+}
+
+.footer-note {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
 /* Button base styles */
 .btn {
   padding: var(--spacing-md) var(--spacing-xl);
@@ -653,6 +802,32 @@ onMounted(() => {
   .industry-grid,
   .philosophy-grid {
     grid-template-columns: 1fr;
+  }
+
+  .footer-main {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xl);
+  }
+  
+  .footer-links {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+  
+  .footer-brand {
+    text-align: center;
+  }
+  
+  .footer-logo {
+    justify-content: center;
+  }
+  
+  .footer-column {
+    text-align: center;
+  }
+  
+  .footer-column a {
+    justify-content: center;
   }
 }
 

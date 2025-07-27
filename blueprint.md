@@ -83,7 +83,9 @@ fourtrack-os/
 │   │   ├── MedleyPage.vue      # Public medley player
 │   │   ├── MedleySuccess.vue   # PayPal success callback
 │   │   ├── MusicCollection.vue # User's music library
+│   │   ├── PrivacyPolicy.vue   # App Privacy Policy
 │   │   ├── SignupPage.vue      # User registration with email verificationy
+│   │   ├── TermsOfService.vue  # App TOS
 │   │   └── UserProfile.vue     # User settings
 │   │
 │   ├── App.vue                 # Root component
