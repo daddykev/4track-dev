@@ -40,7 +40,8 @@ import {
   faCamera,
   faBriefcase,      // Added for industry section
   faPercentage,     // Added for royalty splits
-  faFolderOpen      // Added for roster management
+  faFolderOpen,      // Added for roster management
+  faEyeSlash
 } from '@fortawesome/free-solid-svg-icons'
 
 // Import brands
@@ -90,6 +91,7 @@ library.add(
   faBriefcase,      // Added for industry section
   faPercentage,     // Added for royalty splits
   faFolderOpen,     // Added for roster management
+  faEyeSlash,      // Added for password visibility toggle
   // Brand icons
   faGoogle,
   faPaypal,

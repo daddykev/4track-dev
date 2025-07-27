@@ -95,10 +95,6 @@ const isSplitValid = computed(() => {
   return Math.abs(totalSplitPercentage.value - 100) < 0.01 // Allow for floating point precision
 })
 
-onMounted(async () => {
-  await loadArtistData()
-})
-
 const loadArtistData = async () => {
   loading.value = true
   error.value = ''
@@ -825,6 +821,30 @@ const handleProcessedPhoto = async (processedImageData) => {
     alert('Failed to save processed photo')
   }
 }
+
+// Audio player visibility toggle
+const toggleMedleyVisibility = async () => {
+  try {
+    const newStatus = !artist.value.hasPublicMedley
+    
+    // Update Firestore
+    await updateDoc(doc(db, 'artistProfiles', artist.value.id), {
+      hasPublicMedley: newStatus,
+      updatedAt: serverTimestamp()
+    })
+    
+    // Update local state
+    artist.value.hasPublicMedley = newStatus
+    
+  } catch (error) {
+    console.error('Error toggling medley visibility:', error)
+    alert('Failed to update medley visibility')
+  }
+}
+
+onMounted(async () => {
+  await loadArtistData()
+})
 </script>
 
 <template>
@@ -875,6 +895,18 @@ const handleProcessedPhoto = async (processedImageData) => {
             <div>
               <h1>{{ artist.name }}'s Studio</h1>
               <p class="artist-genre">{{ artist.genre || 'Independent Artist' }}</p>
+              <!-- Add toggle switch here -->
+              <label class="toggle-switch mt-sm">
+                <input 
+                  type="checkbox" 
+                  :checked="artist.hasPublicMedley"
+                  @change="toggleMedleyVisibility"
+                />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">
+                  {{ artist.hasPublicMedley ? 'Medley is Public' : 'Medley is Hidden' }}
+                </span>
+              </label>
               <!-- Show viewing notice for label/manager/admin -->
               <p v-if="!isOwnStudio" class="viewing-notice">
                 <font-awesome-icon :icon="['fas', 'eye']" />
@@ -1099,6 +1131,17 @@ const handleProcessedPhoto = async (processedImageData) => {
               {{ copied ? 'Copied!' : 'Copy' }}
             </button>
           </div>
+        </div>
+
+        <!-- Add a notice when medley is hidden -->
+        <div v-else-if="artist.customSlug && !artist.hasPublicMedley" class="section-card">
+          <h2>
+            <font-awesome-icon :icon="['fas', 'eye-slash']" />
+            Medley is Hidden
+          </h2>
+          <p class="text-secondary">
+            Your medley is currently hidden from the public. Toggle the switch above to make it discoverable.
+          </p>
         </div>
 
         <!-- Getting Started Tips -->

@@ -205,6 +205,28 @@ const savePayPalEmail = async (artist) => {
   }
 }
 
+const toggleMedleyVisibility = async (artist) => {
+  try {
+    const newStatus = !artist.hasPublicMedley
+    
+    // Update Firestore
+    await updateDoc(doc(db, 'artistProfiles', artist.id), {
+      hasPublicMedley: newStatus,
+      updatedAt: serverTimestamp()
+    })
+    
+    // Update local state
+    const artistIndex = artists.value.findIndex(a => a.id === artist.id)
+    if (artistIndex !== -1) {
+      artists.value[artistIndex].hasPublicMedley = newStatus
+    }
+    
+  } catch (error) {
+    console.error('Error toggling medley visibility:', error)
+    alert('Failed to update medley visibility')
+  }
+}
+
 const closeCreateModal = () => {
   showCreateModal.value = false
   createError.value = ''
@@ -295,13 +317,24 @@ onMounted(() => {
             </div>
           </div>
           
+          <!-- Add toggle switch here -->
+          <div class="medley-toggle-row">
+            <label class="toggle-switch">
+              <input 
+                type="checkbox" 
+                :checked="artist.hasPublicMedley"
+                @change="toggleMedleyVisibility(artist)"
+              />
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">
+                {{ artist.hasPublicMedley ? 'Public Medley' : 'Hidden Medley' }}
+              </span>
+            </label>
+          </div>
+          
           <div class="badges-row">
             <span class="badge" :class="getBadgeClass(artist.role)">
               {{ getRoleLabel(artist.role) }}
-            </span>
-            <span v-if="artist.hasPublicMedley" class="badge badge-success">
-              <font-awesome-icon :icon="['fas', 'check']" />
-              Public Medley
             </span>
           </div>
 
@@ -538,6 +571,12 @@ onMounted(() => {
 .artist-genre {
   margin: var(--spacing-xs) 0 0 0;
   font-size: 0.875rem;
+}
+
+/* Medley Toggle Row */
+.medley-toggle-row {
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 /* Badges Row */

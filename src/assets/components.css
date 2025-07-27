@@ -324,6 +324,62 @@
   background: var(--bg-hover);
 }
 
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.toggle-switch input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 44px;  /* Reduced from 48px */
+  height: 24px;
+  background-color: var(--bg-tertiary);
+  border-radius: 12px;  /* Set to half the height instead of full */
+  transition: background-color var(--transition-normal);
+  border: 2px solid var(--border-primary);
+  flex-shrink: 0;  /* Prevent flex from squishing it */
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  width: 18px;  /* Adjusted for better proportions */
+  height: 18px;
+  left: 2px;
+  top: 1px;  /* Adjusted to center with the 2px border */
+  background-color: var(--bg-card);
+  border-radius: 50%;
+  transition: transform var(--transition-normal);
+  box-shadow: var(--shadow-sm);
+}
+
+.toggle-switch input:checked + .toggle-slider::after {
+  transform: translateX(20px);  /* Adjusted for new dimensions */
+}
+
+.toggle-label {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  user-select: none;
+}
+
 /* Sections */
 .section {
   background: var(--bg-card);
