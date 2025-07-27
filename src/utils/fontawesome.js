@@ -38,10 +38,11 @@ import {
   faCheck,
   faExternalLinkAlt,
   faCamera,
-  faBriefcase,      // Added for industry section
-  faPercentage,     // Added for royalty splits
-  faFolderOpen,      // Added for roster management
-  faEyeSlash
+  faBriefcase,
+  faPercentage,
+  faFolderOpen,
+  faEyeSlash,
+  faShieldHalved
 } from '@fortawesome/free-solid-svg-icons'
 
 // Import brands
@@ -88,10 +89,11 @@ library.add(
   faCheck,
   faExternalLinkAlt,
   faCamera,
-  faBriefcase,      // Added for industry section
-  faPercentage,     // Added for royalty splits
-  faFolderOpen,     // Added for roster management
-  faEyeSlash,      // Added for password visibility toggle
+  faBriefcase,
+  faPercentage,
+  faFolderOpen,
+  faEyeSlash,
+  faShieldHalved,
   // Brand icons
   faGoogle,
   faPaypal,

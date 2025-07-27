@@ -106,8 +106,8 @@ onMounted(() => {
             <div class="step-icon">
               <font-awesome-icon icon="fa-solid fa-heart" />
             </div>
-            <h3>Save</h3>
-            <p>Heart tracks you love to build your personal collection</p>
+            <h3>Collect</h3>
+            <p>Build a cross-platform collection based upon ISRC</p>
           </div>
           <div class="step-card">
             <div class="step-icon">
@@ -143,10 +143,10 @@ onMounted(() => {
           </div>
           <div class="industry-card">
             <div class="industry-icon">
-              <font-awesome-icon icon="fa-solid fa-folder-open" />
+              <font-awesome-icon icon="fa-solid fa-shield-halved" />
             </div>
-            <h3>Artist Roster Management</h3>
-            <p>Centralized dashboard for multi-artist operations. Create profiles, manage releases, track analytics. Built for modern music businesses.</p>
+            <h3>Privacy-First Analytics</h3>
+            <p>Cookie-free analytics system, ensuring full GDPR/CCPA compliance while providing real-time insights on plays, geolocation, and revenue.</p>
           </div>
         </div>
       </div>
@@ -203,7 +203,7 @@ onMounted(() => {
 }
 
 .hero-title {
-  font-size: 5.0rem; /* Increased by 30% from 3rem */
+  font-size: 4.75rem; /* Increased by 30% from 3rem */
   font-weight: 700;
   margin-bottom: var(--spacing-lg);
   line-height: 1.2;
