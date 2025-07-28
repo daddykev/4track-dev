@@ -180,7 +180,7 @@ fourtrack-os/
 ### Authentication & Security
 1. **Email Verification** - Required for all email/password signups
 2. **Google Sign-In** - Pre-verified authentication option
-3. **Invite Codes** - Special access for early artists (FIRSTWAVE)
+3. **Invite Codes** - For public beta access
 4. **Secure Sessions** - JWT-based authentication
 5. **Privacy First** - Minimal data collection
 6. **Role-Based Access** - Consumer, Artist, and Admin roles

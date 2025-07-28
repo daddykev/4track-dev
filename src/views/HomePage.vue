@@ -236,7 +236,7 @@ onMounted(() => {
 /* Hero Section */
 .hero-section {
   background: url('/hero-image.webp') center/cover no-repeat;
-  color: var(--text-inverse);
+  color: #ffffff; /* Always white */
   padding: 4rem 0;
   text-align: center;
   min-height: 70vh;
@@ -254,7 +254,7 @@ onMounted(() => {
 }
 
 .hero-title {
-  font-size: 4.75rem; /* Increased by 30% from 3rem */
+  font-size: 4.75rem;
   font-weight: 700;
   margin-bottom: var(--spacing-lg);
   line-height: 1.2;
@@ -264,11 +264,11 @@ onMounted(() => {
   gap: var(--spacing-sm);
   white-space: nowrap;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-  color: var(--text-inverse);
+  color: #ffffff; /* Always white */
 }
 
 .title-icon {
-  color: var(--text-inverse);
+  color: #ffffff; /* Always white */
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
   font-size: 1.1em;
 }
@@ -280,20 +280,20 @@ onMounted(() => {
 }
 
 .hero-subtitle {
-  font-size: 1.5rem; /* Increased by 20% from 1.4rem */
+  font-size: 1.5rem;
   margin-bottom: var(--spacing-sm);
   opacity: 0.95;
   line-height: 1.6;
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
-  color: var(--text-inverse);
+  color: #ffffff; /* Always white */
 }
 
 .hero-tagline {
-  font-size: 1.1rem; /* Increased by 10% from 1rem */
+  font-size: 1.1rem;
   margin-bottom: var(--spacing-2xl);
   opacity: 0.85;
   line-height: 1.6;
-  color: var(--text-inverse);
+  color: #ffffff; /* Always white */
 }
 
 .hero-actions {
