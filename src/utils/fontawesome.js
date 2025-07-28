@@ -48,7 +48,9 @@ import {
   faPalette,
   faChartBar,
   faBolt,
-  faRotate
+  faRotate,
+  faSliders,
+  faKey
 } from '@fortawesome/free-solid-svg-icons'
 
 // Import brands
@@ -106,6 +108,8 @@ library.add(
   faChartBar,
   faBolt,
   faRotate,
+  faSliders,
+  faKey,
   // Brand icons
   faGoogle,
   faPaypal,
