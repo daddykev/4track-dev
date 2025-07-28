@@ -18,7 +18,7 @@
 - **Framework**: Vue 3 (Composition API)
 - **Build Tool**: Vite
 - **Routing**: Vue Router
-- **Styling**: CSS with utility-first architecture
+- **Styling**: CSS with utility-first architecture, light/dark theme support
 - **Icons**: FontAwesome 7
 - **Audio**: HTML5 Audio for playback, Web Audio API for visualizations
 - **Image Processing**: Pixels.js for photo filters and effects
@@ -70,6 +70,7 @@ fourtrack-os/
 │   │   ├── customIcons.js      # Custom SVG icon definitions
 │   │   ├── fontawesome.js      # FontAwesome configuration
 │   │   ├── formatters.js       # Data formatting utilities
+│   │   ├── themeManager.js     # Theme switching (light/dark/auto) and persistence
 │   │   └── validators.js       # Input validation utilities
 │   │
 │   ├── views/                  # Page components
@@ -191,6 +192,22 @@ fourtrack-os/
 4. **Secure Payments** - PayPal handles all payment data
 5. **User Control** - Full data export and deletion
 
+## Theme System
+
+The platform supports three theme modes for personalized viewing experience:
+
+### Available Themes
+- **Light Mode** - Clean, bright interface ideal for daytime use
+- **Dark Mode** - Easy on the eyes in low light conditions
+- **Auto Mode** - Follows system preferences (default for new users)
+
+### Implementation
+- CSS custom properties defined in `themes.css` for instant color switching
+- Theme preference stored in user's Firestore document and localStorage
+- No page reload required for theme changes
+- Medley player always uses dark theme for consistent media experience
+- Theme selector with visual previews in User Profile settings
+
 ## Database Schema
 
 ### Collections
@@ -215,6 +232,7 @@ fourtrack-os/
     advancedAnalytics: false,
     teamCollaboration: false
   },
+  theme: 'light' | 'dark' | 'auto', // Default: auto
   emailVerified: boolean,
   inviteCode: string | null,
   createdAt: timestamp,
@@ -382,6 +400,15 @@ Centralized permission checking for role-based access control:
 - `getAccessibleArtists()` - Retrieve all artists user can manage
 - `getRoleLabel()` - Format role for display
 - `extractSpotifyArtistId()` - Parse Spotify URLs
+
+### themeManager.js
+Theme management utility for handling light/dark/auto theme switching:
+- `setTheme(theme)` - Set and persist theme preference
+- `getTheme()` - Get current theme setting
+- `getEffectiveTheme()` - Get actual applied theme (resolves 'auto' to light/dark)
+- Auto-detects system theme changes when in 'auto' mode
+- Persists preference in localStorage and Firestore
+- Applies theme class to document root for CSS custom properties
 
 ### Collaborator Management Functions (in ArtistStudio.vue)
 - `addCollaborator()` - Add new collaborator to track

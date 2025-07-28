@@ -7,9 +7,12 @@ import {
   collection, 
   query, 
   where, 
-  getDocs
+  getDocs,
+  doc,
+  updateDoc
 } from 'firebase/firestore'
 import { authService } from '@/services/auth'
+import { themeManager, THEMES } from '@/utils/themeManager'
 
 const router = useRouter()
 const user = ref(null)
@@ -18,6 +21,16 @@ const artistProfile = ref(null)
 const hasArtistProfile = ref(false)
 const loading = ref(true)
 const error = ref('')
+const savingTheme = ref(false)
+
+// Theme settings
+const currentTheme = ref(themeManager.getTheme())
+
+const themeOptions = [
+  { value: THEMES.LIGHT, label: 'Light Mode', icon: 'sun', description: 'Clean, bright interface' },
+  { value: THEMES.DARK, label: 'Dark Mode', icon: 'moon', description: 'Easy on the eyes in low light' },
+  { value: THEMES.AUTO, label: 'Auto', icon: 'rotate', description: 'Follows your system preference' }
+]
 
 const stats = ref({
   tracksOwned: 0,
@@ -112,6 +125,12 @@ const loadProfile = async () => {
       userData.value = authService.getCurrentUserData()
     }
     
+    // Set theme from user preferences
+    if (userData.value?.theme) {
+      currentTheme.value = userData.value.theme
+      themeManager.setTheme(userData.value.theme)
+    }
+    
     if (user.value) {
       console.log('🎯 Loading artist profile and stats...')
       await Promise.all([
@@ -124,6 +143,28 @@ const loadProfile = async () => {
     error.value = 'Failed to load profile data'
   } finally {
     loading.value = false
+  }
+}
+
+const updateTheme = async (theme) => {
+  if (!user.value) return
+  
+  savingTheme.value = true
+  currentTheme.value = theme
+  themeManager.setTheme(theme)
+  
+  try {
+    await updateDoc(doc(db, 'users', user.value.uid), {
+      theme: theme,
+      updatedAt: new Date()
+    })
+    
+    userData.value = { ...userData.value, theme }
+  } catch (err) {
+    console.error('Error saving theme preference:', err)
+    error.value = 'Failed to save theme preference'
+  } finally {
+    savingTheme.value = false
   }
 }
 
@@ -330,6 +371,36 @@ onMounted(async () => {
             </div>
           </section>
 
+          <!-- Appearance Section -->
+          <section class="profile-section">
+            <h2>
+              <font-awesome-icon :icon="['fas', 'palette']" class="mr-sm" />
+              Appearance
+            </h2>
+            <p class="text-secondary mb-lg">Choose how 4track looks and feels</p>
+            
+            <div class="theme-options">
+              <div 
+                v-for="option in themeOptions" 
+                :key="option.value"
+                class="theme-option"
+                :class="{ 'active': currentTheme === option.value }"
+                @click="updateTheme(option.value)"
+              >
+                <font-awesome-icon :icon="['fas', option.icon]" class="theme-icon" />
+                <div class="theme-content">
+                  <h4 class="theme-label">{{ option.label }}</h4>
+                  <p class="theme-description">{{ option.description }}</p>
+                </div>
+                <font-awesome-icon 
+                  v-if="currentTheme === option.value" 
+                  :icon="['fas', 'check']" 
+                  class="theme-check" 
+                />
+              </div>
+            </div>
+          </section>
+
           <!-- Collection Stats -->
           <section class="profile-section">
             <h2>
@@ -364,7 +435,7 @@ onMounted(async () => {
           <!-- Quick Actions -->
           <section class="profile-section">
             <h2>
-              <font-awesome-icon :icon="['fas', 'lightning-bolt']" class="mr-sm" />
+              <font-awesome-icon :icon="['fas', 'bolt']" class="mr-sm" />
               Quick Actions
             </h2>
             <div class="actions-grid">
@@ -486,6 +557,65 @@ onMounted(async () => {
   font-weight: 500;
   margin: 0;
   font-size: var(--font-base);
+}
+
+/* Theme Options */
+.theme-options {
+  display: grid;
+  gap: var(--spacing-md);
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  background: var(--bg-card);
+}
+
+.theme-option:hover {
+  border-color: var(--color-primary);
+  background-color: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-option.active {
+  border-color: var(--color-primary);
+  background-color: var(--bg-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-icon {
+  font-size: 2rem;
+  margin-right: var(--spacing-lg);
+  color: var(--text-secondary);
+}
+
+.theme-content {
+  flex: 1;
+}
+
+.theme-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.theme-description {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.theme-check {
+  color: var(--color-primary);
+  font-weight: bold;
+  font-size: 1.5rem;
 }
 
 /* Stats Grid */
@@ -664,6 +794,15 @@ onMounted(async () => {
   
   .profile-section {
     padding: var(--spacing-lg);
+  }
+  
+  .theme-option {
+    padding: var(--spacing-md);
+  }
+  
+  .theme-icon {
+    font-size: 1.5rem;
+    margin-right: var(--spacing-md);
   }
 }
 

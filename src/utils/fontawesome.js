@@ -42,7 +42,13 @@ import {
   faPercentage,
   faFolderOpen,
   faEyeSlash,
-  faShieldHalved
+  faShieldHalved,
+  faSun,
+  faMoon,
+  faPalette,
+  faChartBar,
+  faBolt,
+  faRotate
 } from '@fortawesome/free-solid-svg-icons'
 
 // Import brands
@@ -94,6 +100,12 @@ library.add(
   faFolderOpen,
   faEyeSlash,
   faShieldHalved,
+  faSun,
+  faMoon,
+  faPalette,
+  faChartBar,
+  faBolt,
+  faRotate,
   // Brand icons
   faGoogle,
   faPaypal,
