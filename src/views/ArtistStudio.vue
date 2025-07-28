@@ -739,6 +739,7 @@ const saveTrack = async () => {
         format: audioMetadata.format,
         sampleRate: audioMetadata.sampleRate,
         bitDepth: audioMetadata.bitDepth,
+        bitrate: audioMetadata.bitrate,  // Add this line
         duration: audioMetadata.duration,
         channels: audioMetadata.channels
       }

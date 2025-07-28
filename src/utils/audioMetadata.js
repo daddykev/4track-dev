@@ -4,6 +4,7 @@ export async function extractAudioMetadata(file) {
     format: '',
     sampleRate: null,
     bitDepth: null,
+    bitrate: null,
     duration: null,
     channels: null
   }
@@ -43,12 +44,46 @@ export async function extractAudioMetadata(file) {
     metadata.duration = audioBuffer.duration
     metadata.channels = audioBuffer.numberOfChannels
     
+    // Calculate bitrate for compressed formats (MP3, AAC, OGG)
+    if (metadata.format === 'MP3' || metadata.format === 'AAC' || metadata.format === 'OGG') {
+      // Bitrate = (file size in bits) / (duration in seconds)
+      // Convert to kbps
+      const fileSizeInBits = file.size * 8
+      const bitrateInBps = fileSizeInBits / metadata.duration
+      const bitrateInKbps = Math.round(bitrateInBps / 1000)
+      
+      // Round to common bitrates for MP3
+      if (metadata.format === 'MP3') {
+        metadata.bitrate = getNearestCommonBitrate(bitrateInKbps)
+      } else {
+        metadata.bitrate = bitrateInKbps
+      }
+    }
+    
     audioContext.close()
   } catch (error) {
     console.error('Error decoding audio:', error)
   }
   
   return metadata
+}
+
+// Helper to round to nearest common MP3 bitrate
+function getNearestCommonBitrate(bitrate) {
+  const commonBitrates = [8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
+  
+  let nearest = commonBitrates[0]
+  let minDiff = Math.abs(bitrate - nearest)
+  
+  for (const rate of commonBitrates) {
+    const diff = Math.abs(bitrate - rate)
+    if (diff < minDiff) {
+      minDiff = diff
+      nearest = rate
+    }
+  }
+  
+  return nearest
 }
 
 // Helper to extract bit depth from WAV file header
@@ -76,8 +111,13 @@ export function formatAudioMetadata(metadata) {
   
   const parts = []
   
-  // Bit depth (only for formats that have it)
-  if (metadata.bitDepth) {
+  // For MP3 and other compressed formats, show bitrate instead of bit depth
+  if (metadata.format === 'MP3' || metadata.format === 'AAC' || metadata.format === 'OGG') {
+    if (metadata.bitrate) {
+      parts.push(`${metadata.bitrate} kbps`)
+    }
+  } else if (metadata.bitDepth) {
+    // For uncompressed formats (WAV, FLAC), show bit depth
     parts.push(`${metadata.bitDepth}-bit`)
   }
   
