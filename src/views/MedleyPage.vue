@@ -5,6 +5,7 @@ import { db, auth } from '@/firebase'
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { apiService } from '@/services/api'
+import { formatAudioMetadata } from '@/utils/audioMetadata'
 import AudioMeters from '@/components/AudioMeters.vue'
 import AudioRTA from '@/components/AudioRTA.vue'
 
@@ -54,6 +55,11 @@ onAuthStateChanged(auth, (user) => {
   if (user && medley.value) {
     loadHeartedTracks()
   }
+})
+
+const currentTrackMetadata = computed(() => {
+  if (!currentTrack.value?.audioMetadata) return ''
+  return formatAudioMetadata(currentTrack.value.audioMetadata)
 })
 
 // Computed
@@ -757,6 +763,11 @@ watch(() => currentUser.value, async (newUser) => {
             />
           </div>
 
+          <!-- Audio Format Info - NEW -->
+          <div v-if="currentTrackMetadata" class="audio-format-info">
+            {{ currentTrackMetadata }}
+          </div>
+          
           <!-- Progress Bar -->
           <div class="progress-container">
             <span class="time-label">{{ formattedCurrentTime }}</span>
@@ -1257,7 +1268,7 @@ watch(() => currentUser.value, async (newUser) => {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm); /* Changed from var(--spacing-lg) */
 }
 
 .progress-bar {
@@ -1566,6 +1577,15 @@ watch(() => currentUser.value, async (newUser) => {
 
 .collab-names {
   color: var(--text-primary);
+}
+
+.audio-format-info {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  margin-bottom: var(--spacing-sm); /* Changed from var(--spacing-lg) */
+  /* Removed font-family to use default */
+  letter-spacing: 0.5px;
 }
 
 /* Loading & Error States */

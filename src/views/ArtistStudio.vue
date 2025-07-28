@@ -24,6 +24,7 @@ import {
 import { apiService } from '@/services/api'
 import { validateAudioFile, validateImageFile, validateTrackMetadata } from '@/utils/validators'
 import { hasArtistAccess, getRoleLabel } from '@/utils/permissions'
+import { extractAudioMetadata } from '@/utils/audioMetadata'
 import PhotoLab from '@/components/PhotoLab.vue'
 
 const router = useRouter()
@@ -724,11 +725,23 @@ const saveTrack = async () => {
     
     // Upload files if provided
     if (trackForm.value.audioFile) {
+      // Extract audio metadata before upload
+      const audioMetadata = await extractAudioMetadata(trackForm.value.audioFile)
+      
       const audioPath = `${user.uid}/medley/${artist.value.id}/audio/${Date.now()}_${trackForm.value.audioFile.name}`
       trackData.audioUrl = await uploadFile(trackForm.value.audioFile, audioPath)
       trackData.audioPath = audioPath
       trackData.audioFilename = trackForm.value.audioFile.name
       trackData.audioSize = trackForm.value.audioFile.size
+      
+      // Add the extracted metadata
+      trackData.audioMetadata = {
+        format: audioMetadata.format,
+        sampleRate: audioMetadata.sampleRate,
+        bitDepth: audioMetadata.bitDepth,
+        duration: audioMetadata.duration,
+        channels: audioMetadata.channels
+      }
     }
     
     if (trackForm.value.artworkFile) {
