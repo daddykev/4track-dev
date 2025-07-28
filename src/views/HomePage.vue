@@ -303,8 +303,8 @@ onMounted(() => {
 }
 
 .hero-cta {
-  background-color: var(--text-inverse);
-  color: var(--color-primary);
+  background-color: var(--color-primary);
+  color: #ffffff; /* Always white */
   border: none;
   font-weight: 600;
   text-decoration: none;
@@ -318,13 +318,14 @@ onMounted(() => {
 .hero-cta:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-  background-color: var(--bg-card);
+  background-color: var(--color-primary-hover);
+  color: #ffffff; /* Stay white on hover */
 }
 
 .hero-cta-secondary {
   background-color: rgba(255, 255, 255, 0.1);
-  color: var(--text-inverse);
-  border: 2px solid var(--text-inverse);
+  color: #ffffff; /* Always white */
+  border: 2px solid #ffffff; /* Always white */
   font-weight: 600;
   text-decoration: none;
   backdrop-filter: blur(10px);
@@ -522,10 +523,10 @@ onMounted(() => {
   justify-content: center;
 }
 
-/* GitHub Button - smaller size */
+/* GitHub Button - smaller size with always white text */
 .btn-github {
   background-color: #24292e;
-  color: var(--text-inverse);
+  color: #ffffff; /* Always white */
   border: none;
   font-weight: 600;
   font-size: var(--font-sm);
@@ -542,6 +543,7 @@ onMounted(() => {
   background-color: #2ea043;
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  color: #ffffff; /* Stay white on hover */
 }
 
 /* CTA Section */
