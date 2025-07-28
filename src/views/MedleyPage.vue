@@ -763,7 +763,7 @@ watch(() => currentUser.value, async (newUser) => {
             />
           </div>
 
-          <!-- Audio Format Info - NEW -->
+          <!-- Audio Format Info -->
           <div v-if="currentTrackMetadata" class="audio-format-info">
             {{ currentTrackMetadata }}
           </div>
