@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useTheme } from '@/composables/useTheme';
 
 const props = defineProps({
@@ -12,6 +12,8 @@ const { canvasBgColor, canvasGridColor, isDarkTheme } = useTheme();
 
 const spectroscopeCanvas = ref(null);
 const animationFrame = ref(null);
+const isPaused = ref(false);
+const allBandsAtRest = ref(false);
 let lastFrameTime = 0;
 
 // Constants
@@ -23,6 +25,7 @@ const MAX_DB = 0;
 const SMOOTHING_FACTOR = 0.8;
 const BAR_WIDTH = 4;
 const BAR_SPACING = 1;
+const PAUSE_DECAY_RATE = 60; // Increased to 60 dB per second for faster decay
 
 // Frequency bands for 1/3 octave analysis
 const FREQUENCY_BANDS = [
@@ -42,13 +45,27 @@ const formatFrequency = (freq) => {
     `${freq} Hz`;
 };
 
+// Apply decay when paused - ensure we reach MIN_DB
+const applyPauseDecay = (value, deltaTime) => {
+  if (value <= MIN_DB) return MIN_DB;
+  const decayed = value - (PAUSE_DECAY_RATE * deltaTime / 1000);
+  return decayed <= MIN_DB ? MIN_DB : decayed;
+};
+
+// Check if all bands are at rest - use MIN_DB as threshold
+const checkIfAllBandsAtRest = () => {
+  // Check both current levels and peak levels
+  const allCurrentAtRest = currentLevels.value.every(level => level <= MIN_DB);
+  const allPeaksAtRest = peakLevels.value.every(level => level <= MIN_DB);
+  return allCurrentAtRest && allPeaksAtRest;
+};
+
 const drawSpectroscope = () => {
   const currentTime = performance.now();
   const deltaTime = lastFrameTime ? currentTime - lastFrameTime : 16.667;
 
   const ctx = spectroscopeCanvas.value?.getContext('2d');
-  if (!ctx || !props.analyserNode || !props.isPlaying) {
-    drawEmptyBands(ctx);
+  if (!ctx) {
     animationFrame.value = requestAnimationFrame(drawSpectroscope);
     lastFrameTime = currentTime;
     return;
@@ -58,88 +75,124 @@ const drawSpectroscope = () => {
   ctx.fillStyle = canvasBgColor.value;
   ctx.fillRect(0, 0, 159, 60);
 
-  const bufferLength = props.analyserNode.frequencyBinCount;
-  const dataArray = new Float32Array(bufferLength);
-  props.analyserNode.getFloatFrequencyData(dataArray);
+  if (!props.analyserNode) {
+    drawEmptyBands(ctx);
+    animationFrame.value = requestAnimationFrame(drawSpectroscope);
+    lastFrameTime = currentTime;
+    return;
+  }
 
-  // Calculate band values using defined frequency bands
-  const bandLevels = new Float32Array(NUM_BANDS);
-  const sampleRate = props.analyserNode.context.sampleRate;
+  let bandLevels = new Float32Array(NUM_BANDS);
 
-  for (let i = 0; i < NUM_BANDS; i++) {
-    const centerFreq = FREQUENCY_BANDS[i];
-    // Calculate bandwidth for 1/3 octave
-    const bandwidth = centerFreq * (Math.pow(2, 1/6) - Math.pow(2, -1/6));
-    const startFreq = centerFreq - bandwidth/2;
-    const endFreq = centerFreq + bandwidth/2;
+  // Handle paused state
+  if (!props.isPlaying) {
+    isPaused.value = true;
     
-    // Convert frequencies to FFT bins
-    const startBin = Math.max(1, Math.floor(startFreq * bufferLength / sampleRate));
-    const endBin = Math.min(
-      bufferLength - 1, 
-      Math.ceil(endFreq * bufferLength / sampleRate)
-    );
+    // Apply decay to all bands - no smoothing during decay
+    for (let i = 0; i < NUM_BANDS; i++) {
+      currentLevels.value[i] = applyPauseDecay(currentLevels.value[i], deltaTime);
+      peakLevels.value[i] = applyPauseDecay(peakLevels.value[i], deltaTime);
+      bandLevels[i] = currentLevels.value[i];
+    }
     
-    let energySum = 0;
-    let binCount = 0;
-    
-    // Sum energy in the frequency band
-    for (let j = startBin; j <= endBin; j++) {
-      const magnitude = Math.pow(10, dataArray[j] / 20);
-      energySum += magnitude * magnitude; // Use power sum for better accuracy
-      binCount++;
+    // Check if all bands have decayed to rest
+    allBandsAtRest.value = checkIfAllBandsAtRest();
+  } else {
+    // Playing - update with real audio data
+    isPaused.value = false;
+    allBandsAtRest.value = false;
+
+    const bufferLength = props.analyserNode.frequencyBinCount;
+    const dataArray = new Float32Array(bufferLength);
+    props.analyserNode.getFloatFrequencyData(dataArray);
+
+    // Calculate band values using defined frequency bands
+    const sampleRate = props.analyserNode.context.sampleRate;
+
+    for (let i = 0; i < NUM_BANDS; i++) {
+      const centerFreq = FREQUENCY_BANDS[i];
+      // Calculate bandwidth for 1/3 octave
+      const bandwidth = centerFreq * (Math.pow(2, 1/6) - Math.pow(2, -1/6));
+      const startFreq = centerFreq - bandwidth/2;
+      const endFreq = centerFreq + bandwidth/2;
+      
+      // Convert frequencies to FFT bins
+      const startBin = Math.max(1, Math.floor(startFreq * bufferLength / sampleRate));
+      const endBin = Math.min(
+        bufferLength - 1, 
+        Math.ceil(endFreq * bufferLength / sampleRate)
+      );
+      
+      let energySum = 0;
+      let binCount = 0;
+      
+      // Sum energy in the frequency band
+      for (let j = startBin; j <= endBin; j++) {
+        const magnitude = Math.pow(10, dataArray[j] / 20);
+        energySum += magnitude * magnitude; // Use power sum for better accuracy
+        binCount++;
+      }
+
+      if (binCount > 0) {
+        // Convert back to dB
+        const averagePower = energySum / binCount;
+        bandLevels[i] = Math.max(MIN_DB, 10 * Math.log10(averagePower));
+      } else {
+        bandLevels[i] = MIN_DB;
+      }
     }
 
-    if (binCount > 0) {
-      // Convert back to dB
-      const averagePower = energySum / binCount;
-      bandLevels[i] = Math.max(MIN_DB, 10 * Math.log10(averagePower));
-    } else {
-      bandLevels[i] = MIN_DB;
+    // Apply smoothing only when playing
+    for (let i = 0; i < NUM_BANDS; i++) {
+      currentLevels.value[i] = currentLevels.value[i] * SMOOTHING_FACTOR + 
+                              bandLevels[i] * (1 - SMOOTHING_FACTOR);
+      bandLevels[i] = currentLevels.value[i];
     }
   }
 
-  // Apply smoothing
-  for (let i = 0; i < NUM_BANDS; i++) {
-    currentLevels.value[i] = currentLevels.value[i] * SMOOTHING_FACTOR + 
-                            bandLevels[i] * (1 - SMOOTHING_FACTOR);
-    bandLevels[i] = currentLevels.value[i];
-  }
-
-  // Draw bands
+  // Draw bands only if they're above MIN_DB
   for (let i = 0; i < NUM_BANDS; i++) {
     const x = i * (BAR_WIDTH + BAR_SPACING) + 2;
-    const level = Math.max(MIN_DB, Math.min(MAX_DB, bandLevels[i]));
-    const normalizedLevel = (level - MIN_DB) / (MAX_DB - MIN_DB);
-    const barHeight = Math.max(1, normalizedLevel * 55);
+    const level = bandLevels[i];
+    
+    if (level > MIN_DB) {
+      const normalizedLevel = (level - MIN_DB) / (MAX_DB - MIN_DB);
+      const barHeight = Math.max(1, normalizedLevel * 55);
 
-    ctx.fillStyle = getBarColor(i);
-    ctx.fillRect(x, 58 - barHeight, BAR_WIDTH, barHeight);
+      ctx.fillStyle = getBarColor(i);
+      ctx.fillRect(x, 58 - barHeight, BAR_WIDTH, barHeight);
+    }
 
-    // Draw peak indicator
-    if (peakLevels.value[i] !== undefined) {
+    // Draw peak indicator only if above MIN_DB
+    if (peakLevels.value[i] > MIN_DB) {
       const peakNormalized = (peakLevels.value[i] - MIN_DB) / (MAX_DB - MIN_DB);
       const peakY = 58 - (peakNormalized * 55);
-      ctx.fillStyle = isDarkTheme.value ? 'rgba(255, 255, 255, 0.8)' : 'rgba(44, 62, 80, 0.8)'; // Using --accent-color with opacity
+      ctx.fillStyle = isDarkTheme.value ? 'rgba(255, 255, 255, 0.8)' : 'rgba(44, 62, 80, 0.8)';
       ctx.fillRect(x, peakY, BAR_WIDTH, 1);
     }
   }
 
-  // Update peak levels
-  for (let i = 0; i < NUM_BANDS; i++) {
-    if (bandLevels[i] >= (peakLevels.value[i] || MIN_DB)) {
-      peakLevels.value[i] = bandLevels[i];
-      peakHoldTimes.value[i] = currentTime;
-    } else if (currentTime - peakHoldTimes.value[i] > PEAK_HOLD_TIME) {
-      peakLevels.value[i] = Math.max(
-        bandLevels[i],
-        peakLevels.value[i] - (PEAK_RELEASE_RATE * deltaTime / 1000)
-      );
+  // Update peak levels (only when playing)
+  if (props.isPlaying) {
+    for (let i = 0; i < NUM_BANDS; i++) {
+      if (bandLevels[i] >= (peakLevels.value[i] || MIN_DB)) {
+        peakLevels.value[i] = bandLevels[i];
+        peakHoldTimes.value[i] = currentTime;
+      } else if (currentTime - peakHoldTimes.value[i] > PEAK_HOLD_TIME) {
+        peakLevels.value[i] = Math.max(
+          bandLevels[i],
+          peakLevels.value[i] - (PEAK_RELEASE_RATE * deltaTime / 1000)
+        );
+      }
     }
   }
 
   lastFrameTime = currentTime;
-  animationFrame.value = requestAnimationFrame(drawSpectroscope);
+  
+  // Continue animation if not at rest or if playing
+  if (!allBandsAtRest.value || props.isPlaying) {
+    animationFrame.value = requestAnimationFrame(drawSpectroscope);
+  }
 };
 
 const getBarColor = (bandIndex) => {
@@ -163,11 +216,27 @@ const drawEmptyBands = (ctx) => {
   }
 };
 
+// Watch for isPlaying changes to restart animation if needed
+watch(() => props.isPlaying, (newVal) => {
+  if (newVal && allBandsAtRest.value) {
+    // Restart animation when playback resumes
+    drawSpectroscope();
+  }
+});
+
+// Reset all levels when component mounts
+const resetLevels = () => {
+  currentLevels.value.fill(MIN_DB);
+  peakLevels.value.fill(MIN_DB);
+  peakHoldTimes.value.fill(0);
+};
+
 defineExpose({
   drawSpectroscope
 });
 
 onMounted(() => {
+  resetLevels();
   const ctx = spectroscopeCanvas.value?.getContext('2d');
   drawEmptyBands(ctx);
   drawSpectroscope();

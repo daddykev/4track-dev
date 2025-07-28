@@ -11,9 +11,14 @@ const props = defineProps({
 const levelMeterCanvas = ref(null);
 const animationFrame = ref(null);
 const lastFrameTime = ref(0);
+const isPaused = ref(false);
+const allMetersAtRest = ref(false);
 
 // Get theme values from our composable
 const { canvasBgColor, meterColors, isDarkTheme } = useTheme();
+
+// Decay rate for when playback stops (dB per second)
+const PAUSE_DECAY_RATE = 60; // 60 dB per second = ~1 second to decay from 0 to -60dB
 
 const channelData = ref({
   left: {
@@ -110,6 +115,21 @@ const applyPeakRelease = (currentPeak, previousPeak, deltaTime) => {
   return Math.max(currentPeak, previousPeak - releaseAmount);
 };
 
+// Apply decay when paused
+const applyPauseDecay = (value, deltaTime) => {
+  if (value === -Infinity) return -Infinity;
+  return value - (PAUSE_DECAY_RATE * deltaTime / 1000);
+};
+
+// Check if all meters are at rest (below -60dB)
+const checkIfAllMetersAtRest = () => {
+  const threshold = -60;
+  return channelData.value.left.peak.displayed < threshold &&
+         channelData.value.left.rms.averaged < threshold &&
+         channelData.value.right.peak.displayed < threshold &&
+         channelData.value.right.rms.averaged < threshold;
+};
+
 const drawMeter = () => {
   const currentTime = performance.now();
   const deltaTime = lastFrameTime.value ? currentTime - lastFrameTime.value : 16.667;
@@ -120,8 +140,8 @@ const drawMeter = () => {
     return;
   }
 
-  // If no canvas or no analyzer nodes or we aren't playing, draw empty
-  if (!levelMeterCanvas.value || !props.leftAnalyserNode || !props.rightAnalyserNode || !props.isPlaying) {
+  // If no canvas or no analyzer nodes, draw empty
+  if (!levelMeterCanvas.value || !props.leftAnalyserNode || !props.rightAnalyserNode) {
     const ctx = levelMeterCanvas.value?.getContext('2d');
     if (ctx) {
       ctx.clearRect(0, 0, 120, 40);
@@ -132,44 +152,73 @@ const drawMeter = () => {
     return;
   }
 
-  const leftBufferLength = props.leftAnalyserNode.frequencyBinCount;
-  const leftData = new Float32Array(leftBufferLength);
-  props.leftAnalyserNode.getFloatTimeDomainData(leftData);
+  // Handle paused state
+  if (!props.isPlaying) {
+    isPaused.value = true;
+    
+    // Apply decay to all meters
+    channelData.value.left.peak.current = applyPauseDecay(channelData.value.left.peak.current, deltaTime);
+    channelData.value.left.peak.held = applyPauseDecay(channelData.value.left.peak.held, deltaTime);
+    channelData.value.left.peak.displayed = applyPauseDecay(channelData.value.left.peak.displayed, deltaTime);
+    channelData.value.left.rms.current = applyPauseDecay(channelData.value.left.rms.current, deltaTime);
+    channelData.value.left.rms.averaged = applyPauseDecay(channelData.value.left.rms.averaged, deltaTime);
+    channelData.value.left.rms.recentMin = applyPauseDecay(channelData.value.left.rms.recentMin, deltaTime);
+    channelData.value.left.rms.recentMax = applyPauseDecay(channelData.value.left.rms.recentMax, deltaTime);
+    
+    channelData.value.right.peak.current = applyPauseDecay(channelData.value.right.peak.current, deltaTime);
+    channelData.value.right.peak.held = applyPauseDecay(channelData.value.right.peak.held, deltaTime);
+    channelData.value.right.peak.displayed = applyPauseDecay(channelData.value.right.peak.displayed, deltaTime);
+    channelData.value.right.rms.current = applyPauseDecay(channelData.value.right.rms.current, deltaTime);
+    channelData.value.right.rms.averaged = applyPauseDecay(channelData.value.right.rms.averaged, deltaTime);
+    channelData.value.right.rms.recentMin = applyPauseDecay(channelData.value.right.rms.recentMin, deltaTime);
+    channelData.value.right.rms.recentMax = applyPauseDecay(channelData.value.right.rms.recentMax, deltaTime);
+    
+    // Check if all meters have decayed to rest
+    allMetersAtRest.value = checkIfAllMetersAtRest();
+  } else {
+    // Playing - update with real audio data
+    isPaused.value = false;
+    allMetersAtRest.value = false;
+    
+    const leftBufferLength = props.leftAnalyserNode.frequencyBinCount;
+    const leftData = new Float32Array(leftBufferLength);
+    props.leftAnalyserNode.getFloatTimeDomainData(leftData);
 
-  const rightBufferLength = props.rightAnalyserNode.frequencyBinCount;
-  const rightData = new Float32Array(rightBufferLength);
-  props.rightAnalyserNode.getFloatTimeDomainData(rightData);
+    const rightBufferLength = props.rightAnalyserNode.frequencyBinCount;
+    const rightData = new Float32Array(rightBufferLength);
+    props.rightAnalyserNode.getFloatTimeDomainData(rightData);
 
-  // Process left channel
-  let leftPeak = 0, leftRMS = 0;
-  for (let i = 0; i < leftData.length; i++) {
-    const val = Math.abs(leftData[i]);
-    leftPeak = Math.max(leftPeak, val);
-    leftRMS += val * val;
+    // Process left channel
+    let leftPeak = 0, leftRMS = 0;
+    for (let i = 0; i < leftData.length; i++) {
+      const val = Math.abs(leftData[i]);
+      leftPeak = Math.max(leftPeak, val);
+      leftRMS += val * val;
+    }
+    leftRMS = Math.sqrt(leftRMS / leftData.length);
+
+    // Process right channel
+    let rightPeak = 0, rightRMS = 0;
+    for (let i = 0; i < rightData.length; i++) {
+      const val = Math.abs(rightData[i]);
+      rightPeak = Math.max(rightPeak, val);
+      rightRMS += val * val;
+    }
+    rightRMS = Math.sqrt(rightRMS / rightData.length);
+
+    // Convert to dB
+    const toDB = (value) => (value <= 0 ? -Infinity : 20 * Math.log10(value));
+    const leftPeakDB = toDB(leftPeak);
+    const leftRMSDB = toDB(leftRMS);
+    const rightPeakDB = toDB(rightPeak);
+    const rightRMSDB = toDB(rightRMS);
+
+    // Update meters
+    updatePeakMeter(channelData.value.left.peak, leftPeakDB, currentTime, deltaTime);
+    updatePeakMeter(channelData.value.right.peak, rightPeakDB, currentTime, deltaTime);
+    updateRMSMeter(channelData.value.left.rms, leftRMSDB, currentTime, deltaTime);
+    updateRMSMeter(channelData.value.right.rms, rightRMSDB, currentTime, deltaTime);
   }
-  leftRMS = Math.sqrt(leftRMS / leftData.length);
-
-  // Process right channel
-  let rightPeak = 0, rightRMS = 0;
-  for (let i = 0; i < rightData.length; i++) {
-    const val = Math.abs(rightData[i]);
-    rightPeak = Math.max(rightPeak, val);
-    rightRMS += val * val;
-  }
-  rightRMS = Math.sqrt(rightRMS / rightData.length);
-
-  // Convert to dB
-  const toDB = (value) => (value <= 0 ? -Infinity : 20 * Math.log10(value));
-  const leftPeakDB = toDB(leftPeak);
-  const leftRMSDB = toDB(leftRMS);
-  const rightPeakDB = toDB(rightPeak);
-  const rightRMSDB = toDB(rightRMS);
-
-  // Update meters
-  updatePeakMeter(channelData.value.left.peak, leftPeakDB, currentTime, deltaTime);
-  updatePeakMeter(channelData.value.right.peak, rightPeakDB, currentTime, deltaTime);
-  updateRMSMeter(channelData.value.left.rms, leftRMSDB, currentTime, deltaTime);
-  updateRMSMeter(channelData.value.right.rms, rightRMSDB, currentTime, deltaTime);
 
   // Draw the meter bars
   const ctx = levelMeterCanvas.value.getContext('2d');
@@ -201,7 +250,11 @@ const drawMeter = () => {
   ctx.restore();
 
   lastFrameTime.value = currentTime;
-  animationFrame.value = requestAnimationFrame(drawMeter);
+  
+  // Continue animation if not at rest
+  if (!allMetersAtRest.value || props.isPlaying) {
+    animationFrame.value = requestAnimationFrame(drawMeter);
+  }
 };
 
 const drawMeterBar = (ctx, y, value, type, config = {}) => {
@@ -270,6 +323,14 @@ const drawEmptyMeters = (ctx) => {
     ctx.fillRect(0, 2.5 + (i * 15), 150, 10);
   }
 };
+
+// Watch for isPlaying changes to restart animation if needed
+watch(() => props.isPlaying, (newVal) => {
+  if (newVal && allMetersAtRest.value) {
+    // Restart animation when playback resumes
+    drawMeter();
+  }
+});
 
 defineExpose({
   drawMeter
