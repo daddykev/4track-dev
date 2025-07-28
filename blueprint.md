@@ -51,6 +51,7 @@ fourtrack-os/
 │   │   ├── AudioMeters.vue     # RMS and peak volume meters
 │   │   ├── AudioRTA.vue        # Frequency analyzer
 │   │   ├── CustomIcon.vue      # Reusable component for rendering SVG icons
+│   │   ├── FeedPlayer.vue      # Mini player for discover feed with tape machine animation
 │   │   ├── NavBar.vue          # Main navigation
 │   │   ├── PhotoLab.vue        # Photo editing modal with filters
 │   │   └── EmailVerificationBanner.vue # Email verification reminder
@@ -68,8 +69,10 @@ fourtrack-os/
 │   ├── utils/                  # Utility functions
 │   │   ├── audioMetadata.js    # Audio file metadata extraction (bit depth, sample rate, format)
 │   │   ├── customIcons.js      # Custom SVG icon definitions
+│   │   ├── fileUpload.js       # File upload utilities with thumbnail generation
 │   │   ├── fontawesome.js      # FontAwesome configuration
 │   │   ├── formatters.js       # Data formatting utilities
+│   │   ├── permissions.js      # Role-based access control utilities
 │   │   ├── themeManager.js     # Theme switching (light/dark/auto) and persistence
 │   │   └── validators.js       # Input validation utilities
 │   │
@@ -153,17 +156,7 @@ fourtrack-os/
 1. **Photo Upload** - High-resolution artist photos (up to 20MB)
 2. **Automatic Thumbnails** - WebP format, 1000px, 85% quality
 3. **Primary Photo** - Set main profile image
-4. **Photo Lab** - Creative photo editing with filters:
-   - Vintage
-   - Perfume
-   - Serenity
-   - Pink Aura
-   - Ocean
-   - Mellow
-   - Coral
-   - Crimson
-   - Greyscale
-   - Phase
+4. **Photo Lab** - Creative photo editing with 10 filters
 
 ### Collaborator Royalty Management
 1. **Add Collaborators** - Add featured artists, producers, and other contributors
