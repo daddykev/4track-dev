@@ -66,6 +66,7 @@ fourtrack-os/
 │   │   └── auth.js             # Authentication service with email verification
 │   │
 │   ├── utils/                  # Utility functions
+│   │   ├── audioMetadata.js    # Audio file metadata extraction (bit depth, sample rate, format)
 │   │   ├── customIcons.js      # Custom SVG icon definitions
 │   │   ├── fontawesome.js      # FontAwesome configuration
 │   │   ├── formatters.js       # Data formatting utilities
