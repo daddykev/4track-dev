@@ -25,6 +25,7 @@ import { apiService } from '@/services/api'
 import { validateAudioFile, validateImageFile, validateTrackMetadata } from '@/utils/validators'
 import { hasArtistAccess, getRoleLabel } from '@/utils/permissions'
 import { extractAudioMetadata } from '@/utils/audioMetadata'
+import { uploadCoverArtWithThumbnail, deleteCoverArt } from '@/utils/fileUpload'
 import PhotoLab from '@/components/PhotoLab.vue'
 
 const router = useRouter()
@@ -64,6 +65,7 @@ const viewingPhoto = ref(null)
 const audioFileInput = ref(null)
 const artworkFileInput = ref(null)
 const photoFileInput = ref(null)
+const coverArtUploadProgress = ref(0)
 
 // Form state
 const trackForm = ref({
@@ -545,46 +547,6 @@ const editTrack = (track) => {
   showTrackModal.value = true
 }
 
-const deleteTrack = async (track) => {
-  if (!confirm(`Delete "${track.title}"?`)) return
-  
-  try {
-    // Delete from Firestore
-    await firestoreDeleteDoc(doc(db, 'medleyTracks', track.id))
-    
-    // Delete files from storage
-    if (track.audioPath) {
-      try {
-        await deleteObject(storageRef(storage, track.audioPath))
-      } catch (err) {
-        console.warn('Could not delete audio file:', err)
-      }
-    }
-    
-    if (track.artworkPath) {
-      try {
-        await deleteObject(storageRef(storage, track.artworkPath))
-      } catch (err) {
-        console.warn('Could not delete artwork:', err)
-      }
-    }
-    
-    // Update artist if no tracks remain
-    if (tracks.value.length === 1) {
-      await updateDoc(doc(db, 'artistProfiles', artist.value.id), {
-        hasPublicMedley: false
-      })
-      artist.value.hasPublicMedley = false
-    }
-    
-    // Reload tracks
-    await loadTracks()
-  } catch (err) {
-    console.error('Error deleting track:', err)
-    alert('Failed to delete track')
-  }
-}
-
 // Collaborator management functions
 const addCollaborator = () => {
   trackForm.value.collaborators.push({
@@ -666,6 +628,7 @@ const uploadFile = async (file, path) => {
   })
 }
 
+// Complete updated saveTrack function
 const saveTrack = async () => {
   // Validate basic fields
   const validation = validateTrackMetadata(trackForm.value)
@@ -703,6 +666,7 @@ const saveTrack = async () => {
   
   saving.value = true
   modalError.value = ''
+  coverArtUploadProgress.value = 0
   
   try {
     const user = auth.currentUser
@@ -739,16 +703,46 @@ const saveTrack = async () => {
         format: audioMetadata.format,
         sampleRate: audioMetadata.sampleRate,
         bitDepth: audioMetadata.bitDepth,
-        bitrate: audioMetadata.bitrate,  // Add this line
+        bitrate: audioMetadata.bitrate,
         duration: audioMetadata.duration,
         channels: audioMetadata.channels
       }
     }
     
+    // Upload artwork with thumbnail generation
     if (trackForm.value.artworkFile) {
-      const artworkPath = `${user.uid}/medley/${artist.value.id}/artwork/${Date.now()}_${trackForm.value.artworkFile.name}`
-      trackData.artworkUrl = await uploadFile(trackForm.value.artworkFile, artworkPath)
-      trackData.artworkPath = artworkPath
+      const trackTimestamp = editingTrack.value?.id || Date.now()
+      
+      try {
+        const artworkResult = await uploadCoverArtWithThumbnail(
+          trackForm.value.artworkFile,
+          user.uid,
+          artist.value.id,
+          trackTimestamp,
+          {
+            onProgress: (progress) => {
+              coverArtUploadProgress.value = progress
+            },
+            onError: (error) => {
+              console.error('Cover art upload error:', error)
+              modalError.value = 'Failed to upload cover art. Please try again.'
+            }
+          }
+        )
+        
+        // Store both original and thumbnail URLs/paths
+        trackData.artworkUrl = artworkResult.thumbnail.url // Use thumbnail for display
+        trackData.artworkPath = artworkResult.thumbnail.path
+        trackData.artworkOriginalUrl = artworkResult.original.url
+        trackData.artworkOriginalPath = artworkResult.original.path
+        
+      } catch (error) {
+        console.error('Error processing cover art:', error)
+        modalError.value = 'Failed to process cover art. Please try again.'
+        saving.value = false
+        coverArtUploadProgress.value = 0
+        return
+      }
     }
     
     if (editingTrack.value) {
@@ -776,6 +770,49 @@ const saveTrack = async () => {
     modalError.value = 'Failed to save track. Please try again.'
   } finally {
     saving.value = false
+    coverArtUploadProgress.value = 0
+  }
+}
+
+// Complete updated deleteTrack function
+const deleteTrack = async (track) => {
+  if (!confirm(`Delete "${track.title}"?`)) return
+  
+  try {
+    // Delete from Firestore
+    await firestoreDeleteDoc(doc(db, 'medleyTracks', track.id))
+    
+    // Delete audio file from storage
+    if (track.audioPath) {
+      try {
+        await deleteObject(storageRef(storage, track.audioPath))
+      } catch (err) {
+        console.warn('Could not delete audio file:', err)
+      }
+    }
+    
+    // Delete cover art files (both original and thumbnail)
+    if (track.artworkOriginalPath || track.artworkPath) {
+      try {
+        await deleteCoverArt(track.artworkOriginalPath, track.artworkPath)
+      } catch (err) {
+        console.warn('Could not delete cover art:', err)
+      }
+    }
+    
+    // Update artist if no tracks remain
+    if (tracks.value.length === 1) {
+      await updateDoc(doc(db, 'artistProfiles', artist.value.id), {
+        hasPublicMedley: false
+      })
+      artist.value.hasPublicMedley = false
+    }
+    
+    // Reload tracks
+    await loadTracks()
+  } catch (err) {
+    console.error('Error deleting track:', err)
+    alert('Failed to delete track')
   }
 }
 
@@ -1363,7 +1400,15 @@ onMounted(async () => {
                   class="form-input"
                   ref="artworkFileInput"
                 />
-                <p class="form-hint">Maximum file size: 20MB</p>
+                <p class="form-hint">Maximum file size: 20MB. Will be cropped to square and resized to 1000×1000px.</p>
+                
+                <!-- Cover art upload progress -->
+                <div v-if="coverArtUploadProgress > 0 && coverArtUploadProgress < 100" class="upload-progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" :style="{ width: coverArtUploadProgress + '%' }"></div>
+                  </div>
+                  <p class="text-muted text-center mt-sm">Processing cover art... {{ Math.round(coverArtUploadProgress) }}%</p>
+                </div>
               </div>
 
               <!-- Error Message -->
@@ -1821,7 +1866,7 @@ onMounted(async () => {
 
 /* Upload Progress */
 .upload-progress {
-  margin-top: var(--spacing-lg);
+  margin-top: var(--spacing-sm);
 }
 
 /* Photo Viewer Modal */
