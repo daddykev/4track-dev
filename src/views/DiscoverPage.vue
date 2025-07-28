@@ -1,136 +1,9 @@
-<template>
-  <div class="discover-page">
-    <!-- Header -->
-    <div class="page-header">
-      <h1>Discover Music</h1>
-      <p>Explore tracks and artists from the 4track community</p>
-      
-      <!-- Settings Button -->
-      <button 
-        v-if="false" 
-        @click="showSettings = true" 
-        class="btn btn-secondary settings-btn"
-      >
-        <font-awesome-icon :icon="['fas', 'sliders']" />
-        Feed Settings
-      </button>
-    </div>
-
-    <!-- Feed Wrapper -->
-    <div class="feed-wrapper">
-      <!-- Loading State -->
-      <div v-if="loading && displayedItems.length === 0" class="loading-container">
-        <div class="loading-spinner"></div>
-        <p class="text-secondary">Loading amazing music...</p>
-      </div>
-
-      <!-- Feed Grid -->
-      <div v-else-if="feedOrder.length > 0" class="feed-grid">
-        <div 
-          v-for="(item, index) in displayedItems" 
-          :key="`${item.type}-${item.id}-${Math.floor(index / feedOrder.length)}`"
-          class="feed-item"
-          @click="handleCardClick(item)"
-        >
-          <!-- Track Card -->
-          <div v-if="item.type === 'track'" class="card feed-card track-feed-card">
-            <div class="card-image-container">
-              <img 
-                v-if="item.artworkUrl" 
-                :src="item.artworkUrl" 
-                :alt="item.title"
-                class="card-image"
-                loading="lazy"
-              />
-              <div v-else class="no-image">
-                <font-awesome-icon :icon="['fas', 'music']" />
-              </div>
-              
-              <!-- Price Badge -->
-              <div class="price-badge" :class="{ 'free': item.price === 0 }">
-                {{ item.price === 0 ? 'FREE' : `$${item.price}` }}
-              </div>
-            </div>
-            
-            <div class="card-content">
-              <h3 class="track-title">{{ item.title }}</h3>
-              <p class="track-artist">{{ item.artistName }}</p>
-              
-              <div class="track-meta">
-                <span v-if="item.duration" class="meta-duration">
-                  <font-awesome-icon :icon="['fas', 'clock']" />
-                  {{ formatDuration(item.duration) }}
-                </span>
-                <span v-if="item.downloadCount" class="meta-downloads">
-                  <font-awesome-icon :icon="['fas', 'download']" />
-                  {{ item.downloadCount }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Artist Card -->
-          <div v-else-if="item.type === 'artist'" class="card feed-card artist-feed-card">
-            <div class="card-image-container">
-              <img 
-                v-if="item.profileImageUrl || item.primaryPhotoThumbnail" 
-                :src="item.primaryPhotoThumbnail || item.profileImageUrl" 
-                :alt="item.name"
-                class="card-image artist-image"
-                loading="lazy"
-              />
-              <div v-else class="no-image">
-                <font-awesome-icon :icon="['fas', 'user-music']" />
-              </div>
-              
-              <div class="artist-badge">ARTIST</div>
-            </div>
-            
-            <div class="card-content">
-              <h3 class="artist-name">{{ item.name }}</h3>
-              <p class="artist-genre">{{ item.genre || 'Independent' }}</p>
-              <p class="artist-track-count">{{ item.trackCount || 0 }} tracks</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div v-else-if="!loading" class="empty-state">
-        <font-awesome-icon :icon="['fas', 'folder-open']" class="empty-icon" />
-        <h3>No music discovered yet</h3>
-        <p>Be the first to share your tracks!</p>
-      </div>
-
-      <!-- Loading More Indicator -->
-      <div v-if="loadingMore" class="loading-more">
-        <div class="loading-spinner"></div>
-        <p class="text-secondary">Loading more...</p>
-      </div>
-    </div>
-
-    <!-- Settings Modal (placeholder for future) -->
-    <div v-if="showSettings" class="modal-overlay" @click.self="showSettings = false">
-      <div class="modal">
-        <div class="modal-header">
-          <h3>Feed Settings</h3>
-          <button @click="showSettings = false" class="close-btn">
-            <font-awesome-icon :icon="['fas', 'times']" />
-          </button>
-        </div>
-        <div class="modal-content">
-          <p class="text-muted">Feed customization coming soon!</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/firebase'
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore'
+import FeedPlayer from '@/components/FeedPlayer.vue'
 
 const router = useRouter()
 
@@ -138,6 +11,12 @@ const router = useRouter()
 const loading = ref(true)
 const loadingMore = ref(false)
 const showSettings = ref(false)
+
+// Add to state
+const selectedTrack = ref(null)
+const trackQueue = ref([])
+const currentTrackIndex = ref(0)
+const showPlayer = ref(false)
 
 // Feed data
 const allTracks = ref([])
@@ -333,8 +212,25 @@ const handleScroll = () => {
 const handleCardClick = (item) => {
   if (item.type === 'artist' && item.customSlug) {
     router.push(`/${item.customSlug}`)
+  } else if (item.type === 'track') {
+    // Build queue of all tracks currently in feed
+    trackQueue.value = displayedItems.value.filter(i => i.type === 'track')
+    const index = trackQueue.value.findIndex(t => t.id === item.id)
+    
+    selectedTrack.value = item
+    currentTrackIndex.value = index >= 0 ? index : 0
+    showPlayer.value = true
   }
-  // For tracks, we could potentially add a preview modal in the future
+}
+
+// Add player control methods
+const closePlayer = () => {
+  showPlayer.value = false
+  // Keep selectedTrack so user can reopen
+}
+
+const changeTrack = (track) => {
+  selectedTrack.value = track
 }
 
 // Utility functions
@@ -354,6 +250,146 @@ const formatDuration = (seconds) => {
   return `${minutes}:${secs.toString().padStart(2, '0')}`
 }
 </script>
+
+<template>
+  <div class="discover-page">
+    <!-- Header -->
+    <div class="page-header">
+      <h1>Discover Music</h1>
+      <p>Explore tracks and artists from the 4track community</p>
+      
+      <!-- Settings Button -->
+      <button 
+        v-if="false" 
+        @click="showSettings = true" 
+        class="btn btn-secondary settings-btn"
+      >
+        <font-awesome-icon :icon="['fas', 'sliders']" />
+        Feed Settings
+      </button>
+    </div>
+
+    <!-- Feed Wrapper -->
+    <div class="feed-wrapper">
+      <!-- Loading State -->
+      <div v-if="loading && displayedItems.length === 0" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p class="text-secondary">Loading amazing music...</p>
+      </div>
+
+      <!-- Feed Grid -->
+      <div v-else-if="feedOrder.length > 0" class="feed-grid">
+        <div 
+          v-for="(item, index) in displayedItems" 
+          :key="`${item.type}-${item.id}-${Math.floor(index / feedOrder.length)}`"
+          class="feed-item"
+          @click="handleCardClick(item)"
+        >
+          <!-- Track Card -->
+          <div v-if="item.type === 'track'" class="card feed-card track-feed-card">
+            <div class="card-image-container">
+              <img 
+                v-if="item.artworkUrl" 
+                :src="item.artworkUrl" 
+                :alt="item.title"
+                class="card-image"
+                loading="lazy"
+              />
+              <div v-else class="no-image">
+                <font-awesome-icon :icon="['fas', 'music']" />
+              </div>
+              
+              <!-- Price Badge -->
+              <div class="price-badge" :class="{ 'free': item.price === 0 }">
+                {{ item.price === 0 ? 'FREE' : `$${item.price}` }}
+              </div>
+            </div>
+            
+            <div class="card-content">
+              <h3 class="track-title">{{ item.title }}</h3>
+              <p class="track-artist">{{ item.artistName }}</p>
+              
+              <div class="track-meta">
+                <span v-if="item.duration" class="meta-duration">
+                  <font-awesome-icon :icon="['fas', 'clock']" />
+                  {{ formatDuration(item.duration) }}
+                </span>
+                <span v-if="item.downloadCount" class="meta-downloads">
+                  <font-awesome-icon :icon="['fas', 'download']" />
+                  {{ item.downloadCount }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Artist Card -->
+          <div v-else-if="item.type === 'artist'" class="card feed-card artist-feed-card">
+            <div class="card-image-container">
+              <img 
+                v-if="item.profileImageUrl || item.primaryPhotoThumbnail" 
+                :src="item.primaryPhotoThumbnail || item.profileImageUrl" 
+                :alt="item.name"
+                class="card-image artist-image"
+                loading="lazy"
+              />
+              <div v-else class="no-image">
+                <font-awesome-icon :icon="['fas', 'user-music']" />
+              </div>
+              
+              <div class="artist-badge">ARTIST</div>
+            </div>
+            
+            <div class="card-content">
+              <h3 class="artist-name">{{ item.name }}</h3>
+              <p class="artist-genre">{{ item.genre || 'Independent' }}</p>
+              <p class="artist-track-count">{{ item.trackCount || 0 }} tracks</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="!loading" class="empty-state">
+        <font-awesome-icon :icon="['fas', 'folder-open']" class="empty-icon" />
+        <h3>No music discovered yet</h3>
+        <p>Be the first to share your tracks!</p>
+      </div>
+
+      <!-- Loading More Indicator -->
+      <div v-if="loadingMore" class="loading-more">
+        <div class="loading-spinner"></div>
+        <p class="text-secondary">Loading more...</p>
+      </div>
+    </div>
+
+    <!-- Add to DiscoverPage.vue template after the feed wrapper -->
+    <FeedPlayer
+      v-if="selectedTrack"
+      :current-track="selectedTrack"
+      :queue="trackQueue"
+      :current-index="currentTrackIndex"
+      :is-visible="showPlayer"
+      @close="closePlayer"
+      @track-change="changeTrack"
+      @update:currentIndex="currentTrackIndex = $event"
+    />
+
+    <!-- Settings Modal (placeholder for future) -->
+    <div v-if="showSettings" class="modal-overlay" @click.self="showSettings = false">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Feed Settings</h3>
+          <button @click="showSettings = false" class="close-btn">
+            <font-awesome-icon :icon="['fas', 'times']" />
+          </button>
+        </div>
+        <div class="modal-content">
+          <p class="text-muted">Feed customization coming soon!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 /* Page Container */
@@ -393,6 +429,11 @@ const formatDuration = (seconds) => {
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
   width: 100%;
+}
+
+/* Add padding when player is active */
+.feed-wrapper.player-active {
+  padding-bottom: 140px;
 }
 
 /* Feed Grid - Same as LabelFeed */
