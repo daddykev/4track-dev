@@ -27,6 +27,7 @@ import { hasArtistAccess, getRoleLabel } from '@/utils/permissions'
 import { extractAudioMetadata } from '@/utils/audioMetadata'
 import { uploadCoverArtWithThumbnail, deleteCoverArt } from '@/utils/fileUpload'
 import PhotoLab from '@/components/PhotoLab.vue'
+import CircularCropEditor from '@/components/CircularCropEditor.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -60,6 +61,10 @@ const modalError = ref('')
 const uploadingPhoto = ref(false)
 const uploadProgress = ref(0)
 const viewingPhoto = ref(null)
+
+// Crop editor state
+const showCropEditor = ref(false)
+const cropEditorPhoto = ref(null)
 
 // Refs
 const audioFileInput = ref(null)
@@ -432,13 +437,48 @@ const createThumbnail = (file, maxSize, quality) => {
 }
 
 const setPrimaryPhoto = async (photo) => {
+  // Open the crop editor instead of directly setting
+  cropEditorPhoto.value = photo
+  showCropEditor.value = true
+}
+
+// Cleaner handleCroppedPhoto function
+const handleCroppedPhoto = async (croppedFile) => {
   try {
-    // Update all photos to not primary
+    // Upload the cropped thumbnail
+    const user = auth.currentUser
+    const timestamp = Date.now()
+    const croppedPath = `${user.uid}/artist-photos/${artist.value.id}/cropped_${timestamp}.webp`
+    const croppedRef = storageRef(storage, croppedPath)
+    
+    // Upload
+    await uploadBytesResumable(croppedRef, croppedFile)
+    const croppedUrl = await getDownloadURL(croppedRef)
+    
+    // Delete old cropped thumbnail if exists
+    const currentPhoto = photos.value.find(p => p.id === cropEditorPhoto.value.id)
+    if (currentPhoto.croppedThumbnailPath && currentPhoto.croppedThumbnailPath !== currentPhoto.thumbnailPath) {
+      try {
+        await deleteObject(storageRef(storage, currentPhoto.croppedThumbnailPath))
+      } catch (err) {
+        console.warn('Could not delete old cropped thumbnail:', err)
+      }
+    }
+    
+    // Update all photos
     const updates = photos.value.map(p => {
-      if (p.id === photo.id) {
-        return updateDoc(doc(db, 'artistPhotos', p.id), { isPrimary: true })
+      if (p.id === cropEditorPhoto.value.id) {
+        // Set this as primary with cropped thumbnail
+        return updateDoc(doc(db, 'artistPhotos', p.id), { 
+          isPrimary: true,
+          croppedThumbnailUrl: croppedUrl,
+          croppedThumbnailPath: croppedPath
+        })
       } else if (p.isPrimary) {
-        return updateDoc(doc(db, 'artistPhotos', p.id), { isPrimary: false })
+        // Remove primary from others
+        return updateDoc(doc(db, 'artistPhotos', p.id), { 
+          isPrimary: false 
+        })
       }
       return Promise.resolve()
     })
@@ -447,14 +487,25 @@ const setPrimaryPhoto = async (photo) => {
     
     // Update artist profile image
     await updateDoc(doc(db, 'artistProfiles', artist.value.id), {
-      profileImageUrl: photo.thumbnailUrl
+      profileImageUrl: croppedUrl
     })
     
+    // Reload photos to get fresh data
     await loadPhotos()
+    
+    // Close editor
+    showCropEditor.value = false
+    cropEditorPhoto.value = null
+    
   } catch (err) {
     console.error('Error setting primary photo:', err)
     alert('Failed to set primary photo')
   }
+}
+
+const closeCropEditor = () => {
+  showCropEditor.value = false
+  cropEditorPhoto.value = null
 }
 
 const deletePhoto = async (photo) => {
@@ -1097,7 +1148,7 @@ onMounted(async () => {
               :class="{ 'primary': photo.isPrimary }"
             >
               <img 
-                :src="photo.thumbnailUrl" 
+                :src="photo.croppedThumbnailUrl || photo.thumbnailUrl" 
                 :alt="`Artist photo ${photo.id}`"
                 class="photo-thumbnail"
                 @click="viewPhoto(photo)"
@@ -1458,6 +1509,14 @@ onMounted(async () => {
         :photo="photoLabPhoto"
         @close="closePhotoLab"
         @save="handleProcessedPhoto"
+      />
+
+      <!-- Circular Crop Editor Modal -->
+      <CircularCropEditor
+        v-if="showCropEditor && cropEditorPhoto"
+        :photo="cropEditorPhoto"
+        @close="closeCropEditor"
+        @save="handleCroppedPhoto"
       />
 
     </div>

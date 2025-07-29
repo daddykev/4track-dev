@@ -50,6 +50,7 @@ fourtrack-os/
 │   ├── components/             # Reusable Vue components
 │   │   ├── AudioMeters.vue     # RMS and peak volume meters
 │   │   ├── AudioRTA.vue        # Frequency analyzer
+│   │   ├── CircularCropEditor.vue # Circular crop tool for primary artist photos
 │   │   ├── CustomIcon.vue      # Reusable component for rendering SVG icons
 │   │   ├── FeedPlayer.vue      # Mini player for discover feed with tape machine animation
 │   │   ├── NavBar.vue          # Main navigation
@@ -156,7 +157,9 @@ fourtrack-os/
 1. **Photo Upload** - High-resolution artist photos (up to 20MB)
 2. **Automatic Thumbnails** - WebP format, 1000px, 85% quality
 3. **Primary Photo** - Set main profile image
-4. **Photo Lab** - Creative photo editing with 10 filters
+4. **Circular Crop Editor** - Interactive drag-to-position cropping for primary photos
+5. **Photo Lab** - Creative photo editing with 10 filters
+6. **Original Preservation** - Keep originals for re-cropping or additional processing
 
 ### Collaborator Royalty Management
 1. **Add Collaborators** - Add featured artists, producers, and other contributors
@@ -460,6 +463,9 @@ Enhanced artist dashboard combining profile and medley management:
 - **Equal split calculator for fair distribution**
 - Share public medley link
 - Upload artist photos with automatic thumbnail generation
+- **Circular crop editor for setting primary profile photo**
+- **Drag-to-position interface for perfect framing**
+- **Automatic 1000×1000 WebP conversion at 85% quality**
 - Set primary photo for artist profile image
 - **Photo Lab integration for creative photo editing**
 - All-in-one interface at `/studio` route
