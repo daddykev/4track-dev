@@ -22,7 +22,7 @@ class ApiService {
   // Medley/PayPal Functions
   async createMedleyPayPalOrder(medleyId, trackId) {
     return this.callFunction('createMedleyPayPalOrder', {
-      medleyId,
+      artistId: medleyId,  // Map medleyId to artistId
       trackId
     })
   }
