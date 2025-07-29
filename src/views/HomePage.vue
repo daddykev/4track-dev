@@ -207,9 +207,9 @@ onMounted(() => {
                 <a href="https://github.com/daddykev/4track-dev/issues" target="_blank" rel="noopener noreferrer">
                   Report Issues
                 </a>
-                <a href="https://github.com/daddykev/4track-dev/wiki" target="_blank" rel="noopener noreferrer">
+                <router-link to="/docs" class="footer-link">
                   Documentation
-                </a>
+                </router-link>
               </div>
               
               <div class="footer-column">

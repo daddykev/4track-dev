@@ -20,6 +20,7 @@ import ArtistRoster from '../views/ArtistRoster.vue'
 import AdminInviteCodes from '../views/AdminInviteCodes.vue'
 import PrivacyPolicy from '../views/PrivacyPolicy.vue'
 import TermsOfService from '../views/TermsOfService.vue'
+import DocsPage from '../views/DocsPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -53,6 +54,12 @@ const router = createRouter({
       name: 'collection',
       component: MusicCollection,
       meta: { title: 'My Collection - 4track', requiresAuth: true }
+    },
+    {
+      path: '/docs',
+      name: 'docs',
+      component: DocsPage,
+      meta: { title: 'Documentation - 4track' }
     },
     {
       path: '/profile',
