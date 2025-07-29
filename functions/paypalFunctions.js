@@ -18,6 +18,15 @@ const PAYPAL_BASE_URL = PAYPAL_MODE === 'live'
   ? 'https://api-m.paypal.com' 
   : 'https://api-m.sandbox.paypal.com';
 
+// Log PayPal configuration (without exposing secrets)
+console.log('PayPal Configuration:', {
+  mode: PAYPAL_MODE,
+  baseUrl: PAYPAL_BASE_URL,
+  hasClientId: !!PAYPAL_CLIENT_ID.value,
+  hasClientSecret: !!PAYPAL_CLIENT_SECRET.value,
+  nodeEnv: process.env.NODE_ENV
+});
+
 // ==================== PayPal Helper Functions ====================
 
 async function getPayPalAccessToken() {
@@ -50,6 +59,9 @@ const createMedleyPayPalOrder = onCall({
   cors: true
 }, async (request) => {
   const { artistId, trackId } = request.data;
+  
+  // Log the mode for this specific function call
+  console.log(`Creating PayPal order in ${PAYPAL_MODE} mode`);
   
   if (!trackId || !artistId) {
     throw new Error('Track ID and Artist ID are required');
@@ -286,7 +298,7 @@ const captureMedleyPayment = onCall({
   }
   
   console.log('Running as service account:', process.env.FUNCTION_IDENTITY || 'default');
-  console.log('Attempting to capture PayPal order:', orderId);
+  console.log(`Attempting to capture PayPal order ${orderId} in ${PAYPAL_MODE} mode`);
   
   try {
     const accessToken = await getPayPalAccessToken();
@@ -598,6 +610,8 @@ const processMedleyFreeDownload = onCall({
   if (!request.auth) {
     throw new Error('Authentication required');
   }
+  
+  console.log(`Processing free download in ${PAYPAL_MODE} mode`);
   
   try {
     // Get track details

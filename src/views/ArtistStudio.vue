@@ -1388,7 +1388,6 @@ onMounted(async () => {
                           type="email"
                           class="form-input"
                           placeholder="PayPal Email"
-                          :readonly="collab.isPrimary && artist.paypalEmail"
                         />
                       </div>
                       
