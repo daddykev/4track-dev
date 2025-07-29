@@ -1200,12 +1200,12 @@ watch(() => currentUser.value, async (newUser) => {
 .reel {
   width: 98px;
   height: 98px;
-  background-color: var(--color-primary);
+  background-color: #667eea; /* Keep primary color */
   border-radius: 50%;
   position: relative;
   overflow: visible;
-  border: 1px solid var(--border-secondary);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   z-index: 1;
   transition: animation-play-state 0.3s ease;
 }
@@ -1224,7 +1224,7 @@ watch(() => currentUser.value, async (newUser) => {
   position: absolute;
   width: 32px;
   height: 32px;
-  background-color: var(--color-primary);
+  background-color: #667eea; /* Keep primary color */
   border-radius: 50%;
   top: 50%;
   left: 50%;
@@ -1236,8 +1236,8 @@ watch(() => currentUser.value, async (newUser) => {
   position: absolute;
   width: 24px;
   height: 24px;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-secondary);
+  background-color: white; /* Always white */
+  border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 50%;
   top: 50%;
   left: 50%;
@@ -1247,8 +1247,7 @@ watch(() => currentUser.value, async (newUser) => {
 
 .wedge {
   position: absolute;
-  background-color: var(--text-primary);
-  opacity: 0.2;
+  background-color: #2a1e17; /* Dark brown for tape */
   width: 25px;
   height: 38px;
   top: 50%;
@@ -1273,8 +1272,7 @@ watch(() => currentUser.value, async (newUser) => {
 
 .tape-path {
   height: 4px;
-  background-color: var(--text-primary);
-  opacity: 0.2;
+  background-color: #222; /* Dark tape color */
   position: absolute;
   width: calc(100% - 82px);
   top: 92%;
@@ -1284,20 +1282,20 @@ watch(() => currentUser.value, async (newUser) => {
     to right,
     transparent 0px,
     transparent 15px,
-    var(--color-warning) 15px,
-    var(--color-warning) 17px,
+    #ffe066 15px, /* Yellow tape markings */
+    #ffe066 17px,
     transparent 17px,
     transparent 35px,
-    var(--color-warning) 35px,
-    var(--color-warning) 36px,
+    rgba(255, 224, 102, 0.5) 35px,
+    rgba(255, 224, 102, 0.5) 36px,
     transparent 36px,
     transparent 50px
   );
   background-size: 52px 100%;
   animation: tape-movement 4.2s linear infinite;
   animation-play-state: paused;
-  border-top: 1px solid var(--border-primary);
-  border-bottom: 1px solid var(--border-secondary);
+  border-top: 1px solid rgba(255,255,255,0.2);
+  border-bottom: 1px solid rgba(0,0,0,0.3);
 }
 
 .tape-machine-animation.playing .tape-path {
