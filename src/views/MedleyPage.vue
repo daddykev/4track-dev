@@ -974,8 +974,8 @@ watch(() => currentUser.value, async (newUser) => {
 /* Base Styles */
 .medley-page {
   min-height: 100vh;
-  background: #0f0f1e;
-  color: #ffffff;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 /* Enhanced Artist Header with reduced vertical spacing */
@@ -1007,19 +1007,19 @@ watch(() => currentUser.value, async (newUser) => {
   height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 3px solid var(--border-primary);
+  box-shadow: var(--shadow-md);
 }
 
 .artist-avatar-placeholder {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   font-size: 2rem;
 }
 
@@ -1027,8 +1027,8 @@ watch(() => currentUser.value, async (newUser) => {
   margin: 0;
   font-size: 2.5rem;
   font-weight: 700;
-  color: #ffffff;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  color: var(--text-primary);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Main Content Centered Layout */
@@ -1040,12 +1040,13 @@ watch(() => currentUser.value, async (newUser) => {
 
 /* Now Playing Primary */
 .now-playing-primary {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   border-radius: var(--radius-xl);
   padding: var(--spacing-2xl);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-primary);
   margin-bottom: var(--spacing-2xl);
+  box-shadow: var(--shadow-md);
 }
 
 .now-playing-container {
@@ -1065,8 +1066,8 @@ watch(() => currentUser.value, async (newUser) => {
   height: 300px;
   border-radius: var(--radius-lg);
   object-fit: cover;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-lg);
+  background-color: var(--bg-tertiary);
   flex-shrink: 0;
 }
 
@@ -1076,7 +1077,7 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .now-playing-title {
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 2rem;
   font-weight: 700;
   margin: 0 0 var(--spacing-sm) 0;
@@ -1084,28 +1085,29 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .now-playing-artist {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   font-size: 1.25rem;
   margin: 0 0 var(--spacing-xl) 0;
 }
 
 /* Empty Now Playing */
 .now-playing-empty {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   border-radius: var(--radius-xl);
   padding: var(--spacing-2xl);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-primary);
   margin-bottom: var(--spacing-2xl);
   min-height: 400px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: var(--shadow-md);
 }
 
 .empty-player-message {
   text-align: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
 }
 
 .empty-icon {
@@ -1123,8 +1125,8 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .download-btn {
-  background: #667eea;
-  color: white;
+  background: var(--color-primary);
+  color: var(--text-inverse);
   border: none;
   padding: var(--spacing-md) var(--spacing-xl);
   border-radius: var(--radius-md);
@@ -1138,7 +1140,7 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .download-btn:hover:not(:disabled) {
-  background: #5568d3;
+  background: var(--color-primary-hover);
   transform: translateY(-2px);
 }
 
@@ -1151,7 +1153,7 @@ watch(() => currentUser.value, async (newUser) => {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   font-size: 0.9rem;
   margin-top: var(--spacing-md);
 }
@@ -1198,12 +1200,12 @@ watch(() => currentUser.value, async (newUser) => {
 .reel {
   width: 98px;
   height: 98px;
-  background-color: #667eea;
+  background-color: var(--color-primary);
   border-radius: 50%;
   position: relative;
   overflow: visible;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-secondary);
+  box-shadow: var(--shadow-sm);
   z-index: 1;
   transition: animation-play-state 0.3s ease;
 }
@@ -1222,7 +1224,7 @@ watch(() => currentUser.value, async (newUser) => {
   position: absolute;
   width: 32px;
   height: 32px;
-  background-color: #667eea;
+  background-color: var(--color-primary);
   border-radius: 50%;
   top: 50%;
   left: 50%;
@@ -1234,8 +1236,8 @@ watch(() => currentUser.value, async (newUser) => {
   position: absolute;
   width: 24px;
   height: 24px;
-  background-color: white;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-secondary);
   border-radius: 50%;
   top: 50%;
   left: 50%;
@@ -1245,7 +1247,8 @@ watch(() => currentUser.value, async (newUser) => {
 
 .wedge {
   position: absolute;
-  background-color: #2a1e17;
+  background-color: var(--text-primary);
+  opacity: 0.2;
   width: 25px;
   height: 38px;
   top: 50%;
@@ -1270,7 +1273,8 @@ watch(() => currentUser.value, async (newUser) => {
 
 .tape-path {
   height: 4px;
-  background-color: #222;
+  background-color: var(--text-primary);
+  opacity: 0.2;
   position: absolute;
   width: calc(100% - 82px);
   top: 92%;
@@ -1280,20 +1284,20 @@ watch(() => currentUser.value, async (newUser) => {
     to right,
     transparent 0px,
     transparent 15px,
-    #ffe066 15px,
-    #ffe066 17px,
+    var(--color-warning) 15px,
+    var(--color-warning) 17px,
     transparent 17px,
     transparent 35px,
-    rgba(255, 224, 102, 0.5) 35px,
-    rgba(255, 224, 102, 0.5) 36px,
+    var(--color-warning) 35px,
+    var(--color-warning) 36px,
     transparent 36px,
     transparent 50px
   );
   background-size: 52px 100%;
   animation: tape-movement 4.2s linear infinite;
   animation-play-state: paused;
-  border-top: 1px solid rgba(255,255,255,0.2);
-  border-bottom: 1px solid rgba(0,0,0,0.3);
+  border-top: 1px solid var(--border-primary);
+  border-bottom: 1px solid var(--border-secondary);
 }
 
 .tape-machine-animation.playing .tape-path {
@@ -1315,13 +1319,13 @@ watch(() => currentUser.value, async (newUser) => {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  margin-bottom: var(--spacing-sm); /* Changed from var(--spacing-lg) */
+  margin-bottom: var(--spacing-sm);
 }
 
 .progress-bar {
   flex: 1;
   height: 6px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--bg-tertiary);
   border-radius: 3px;
   cursor: pointer;
   position: relative;
@@ -1329,14 +1333,14 @@ watch(() => currentUser.value, async (newUser) => {
 
 .progress-fill {
   height: 100%;
-  background: #667eea;
+  background: var(--color-primary);
   border-radius: 3px;
   transition: width 0.1s linear;
 }
 
 .time-label {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   min-width: 40px;
 }
 
@@ -1349,12 +1353,12 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .control-btn {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-tertiary);
   border: none;
   width: 48px;
   height: 48px;
   border-radius: var(--radius-full);
-  color: #ffffff;
+  color: var(--text-primary);
   cursor: pointer;
   transition: all var(--transition-normal);
   display: flex;
@@ -1363,7 +1367,7 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .control-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--bg-hover);
   transform: scale(1.1);
 }
 
@@ -1375,24 +1379,26 @@ watch(() => currentUser.value, async (newUser) => {
 .play-btn {
   width: 56px;
   height: 56px;
-  background: #667eea;
+  background: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .play-btn:hover:not(:disabled) {
-  background: #5568d3;
+  background: var(--color-primary-hover);
 }
 
 /* Track List Section */
 .track-list-section {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-md);
 }
 
 .section-title {
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1.25rem;
   margin: 0 0 var(--spacing-lg) 0;
   display: flex;
@@ -1411,7 +1417,7 @@ watch(() => currentUser.value, async (newUser) => {
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-tertiary);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-normal);
@@ -1419,22 +1425,22 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .track-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-hover);
   transform: translateX(4px);
 }
 
 .track-item.active {
-  background: rgba(102, 126, 234, 0.2);
-  border-color: #667eea;
+  background: var(--bg-hover);
+  border-color: var(--color-primary);
 }
 
 .track-item.playing {
-  background: rgba(102, 126, 234, 0.15);
-  border-color: rgba(102, 126, 234, 0.5);
+  background: var(--bg-hover);
+  border-color: var(--color-primary);
 }
 
 .playing-icon {
-  color: #667eea;
+  color: var(--color-primary);
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -1446,7 +1452,7 @@ watch(() => currentUser.value, async (newUser) => {
 .track-number {
   width: 30px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -1455,7 +1461,7 @@ watch(() => currentUser.value, async (newUser) => {
   height: 50px;
   border-radius: var(--radius-sm);
   object-fit: cover;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--bg-tertiary);
 }
 
 .track-info {
@@ -1464,7 +1470,7 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .track-name {
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 500;
   margin: 0 0 var(--spacing-xs) 0;
   overflow: hidden;
@@ -1477,7 +1483,7 @@ watch(() => currentUser.value, async (newUser) => {
   align-items: center;
   gap: var(--spacing-md);
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
 }
 
 .track-artist {
@@ -1493,7 +1499,7 @@ watch(() => currentUser.value, async (newUser) => {
 .empty-tracks {
   text-align: center;
   padding: var(--spacing-2xl);
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
 }
 
 /* Track Item Actions */
@@ -1506,7 +1512,7 @@ watch(() => currentUser.value, async (newUser) => {
 .heart-btn-small {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   font-size: 1.1rem;
   cursor: pointer;
   padding: var(--spacing-sm);
@@ -1515,12 +1521,12 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .heart-btn-small:hover {
-  color: #dc3545;
+  color: var(--color-danger);
   background: rgba(220, 53, 69, 0.1);
 }
 
 .heart-btn-small.hearted {
-  color: #dc3545;
+  color: var(--color-danger);
 }
 
 .heart-btn-small:disabled {
@@ -1530,7 +1536,7 @@ watch(() => currentUser.value, async (newUser) => {
 
 .price-tag {
   background: rgba(102, 126, 234, 0.2);
-  color: #667eea;
+  color: var(--color-primary);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius-sm);
   font-weight: 600;
@@ -1539,7 +1545,7 @@ watch(() => currentUser.value, async (newUser) => {
 
 .free-tag {
   background: rgba(40, 167, 69, 0.2);
-  color: #28a745;
+  color: var(--color-success);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius-sm);
   font-weight: 600;
@@ -1549,7 +1555,7 @@ watch(() => currentUser.value, async (newUser) => {
 /* Error Message */
 .error-message {
   background: rgba(220, 53, 69, 0.2);
-  color: #ff6b6b;
+  color: var(--color-danger);
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   font-size: 0.9rem;
@@ -1562,7 +1568,7 @@ watch(() => currentUser.value, async (newUser) => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--bg-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1570,12 +1576,12 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .modal {
-  background: #1a1a2e;
+  background: var(--bg-card);
   border-radius: var(--radius-xl);
   max-width: 500px;
   width: 90%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-primary);
 }
 
 .modal-header {
@@ -1583,17 +1589,17 @@ watch(() => currentUser.value, async (newUser) => {
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-lg);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .modal-header h3 {
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .modal-content {
   padding: var(--spacing-lg);
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
 }
 
 .close-btn {
@@ -1601,18 +1607,18 @@ watch(() => currentUser.value, async (newUser) => {
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-secondary);
   transition: color var(--transition-normal);
 }
 
 .close-btn:hover {
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .track-collaborators {
   margin-top: var(--spacing-xs);
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   display: flex;
   gap: var(--spacing-xs);
 }
@@ -1623,15 +1629,14 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .collab-names {
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
 .audio-format-info {
   text-align: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   font-size: 0.85rem;
-  margin-bottom: var(--spacing-sm); /* Changed from var(--spacing-lg) */
-  /* Removed font-family to use default */
+  margin-bottom: var(--spacing-sm);
   letter-spacing: 0.5px;
 }
 
@@ -1648,32 +1653,32 @@ watch(() => currentUser.value, async (newUser) => {
 .loading-container {
   flex-direction: column;
   gap: var(--spacing-md);
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .loading-spinner {
   font-size: 2rem;
-  color: #667eea;
+  color: var(--color-primary);
 }
 
 .error-content {
   text-align: center;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   padding: var(--spacing-2xl);
   border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-primary);
   max-width: 500px;
 }
 
 .error-content h2 {
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1.5rem;
   margin: 0 0 var(--spacing-md) 0;
 }
 
 .error-content p {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
   margin: 0 0 var(--spacing-lg) 0;
 }
 

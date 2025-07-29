@@ -1,4 +1,4 @@
-// src/utils/themeManager.js
+// utils/themeManager.js
 export const THEMES = {
   LIGHT: 'light',
   DARK: 'dark',
@@ -15,6 +15,8 @@ class ThemeManager {
     this.mediaQuery.addEventListener('change', () => {
       if (this.currentTheme === THEMES.AUTO) {
         this.applyTheme()
+        // Emit event when theme changes
+        window.dispatchEvent(new Event('theme-changed'))
       }
     })
   }
@@ -28,6 +30,8 @@ class ThemeManager {
     this.currentTheme = theme
     localStorage.setItem('4track-theme', theme)
     this.applyTheme()
+    // Emit event when theme is manually changed
+    window.dispatchEvent(new Event('theme-changed'))
   }
 
   getTheme() {

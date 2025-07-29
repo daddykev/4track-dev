@@ -1,8 +1,29 @@
-import { computed } from 'vue'
+// composables/useTheme.js
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { themeManager } from '@/utils/themeManager'
 
 export function useTheme() {
-  // For the medley page, we're always in dark mode
-  const isDarkTheme = computed(() => true)
+  const currentTheme = ref(themeManager.getEffectiveTheme())
+  
+  // Update theme when it changes
+  const updateTheme = () => {
+    currentTheme.value = themeManager.getEffectiveTheme()
+  }
+  
+  onMounted(() => {
+    // Listen for theme changes
+    window.addEventListener('theme-changed', updateTheme)
+    
+    // Also listen for system theme changes if in auto mode
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    mediaQuery.addEventListener('change', updateTheme)
+  })
+  
+  onUnmounted(() => {
+    window.removeEventListener('theme-changed', updateTheme)
+  })
+  
+  const isDarkTheme = computed(() => currentTheme.value === 'dark')
 
   const canvasBgColor = computed(() => {
     return isDarkTheme.value ? '#1e1e1e' : '#f5f5f5'
