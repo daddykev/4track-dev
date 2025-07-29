@@ -1,12 +1,13 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { auth, db } from '@/firebase'
 import { signOut, onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import CustomIcon from '@/components/CustomIcon.vue'
 
 const router = useRouter()
+const route = useRoute()
 
 // State
 const user = ref(null)
@@ -119,6 +120,38 @@ const handleClickOutside = (event) => {
   }
 }
 
+// Watch for route changes to reload user data
+watch(() => route.name, async () => {
+  // Reload user data when navigating, especially after login
+  if (auth.currentUser) {
+    await loadUserData(auth.currentUser)
+  }
+})
+
+// Watch for auth.currentUser changes with a slight delay
+let authCheckInterval = null
+const startAuthCheck = () => {
+  // Clear any existing interval
+  if (authCheckInterval) {
+    clearInterval(authCheckInterval)
+  }
+  
+  // Check auth state periodically for a short time after mount
+  let checks = 0
+  authCheckInterval = setInterval(async () => {
+    checks++
+    if (auth.currentUser && !userData.value) {
+      await loadUserData(auth.currentUser)
+    }
+    
+    // Stop checking after 5 seconds or once we have user data
+    if (checks > 10 || userData.value) {
+      clearInterval(authCheckInterval)
+      authCheckInterval = null
+    }
+  }, 500)
+}
+
 // Lifecycle
 onMounted(() => {
   // Auth state listener
@@ -127,6 +160,9 @@ onMounted(() => {
     await loadUserData(firebaseUser)
   })
 
+  // Start periodic auth check
+  startAuthCheck()
+
   // Click outside listener
   document.addEventListener('click', handleClickOutside)
 
@@ -134,6 +170,9 @@ onMounted(() => {
   onUnmounted(() => {
     unsubscribe()
     document.removeEventListener('click', handleClickOutside)
+    if (authCheckInterval) {
+      clearInterval(authCheckInterval)
+    }
   })
 })
 </script>

@@ -132,18 +132,10 @@ const router = createRouter({
   ]
 })
 
-// Track current auth state
-let isAuthenticated = false
-let authStateResolved = false
-let userData = null
-let userDataLoaded = false
-
 // Function to load user data
 const loadUserData = async (user) => {
   if (!user) {
-    userData = null
-    userDataLoaded = true
-    return
+    return null
   }
 
   try {
@@ -154,23 +146,14 @@ const loadUserData = async (user) => {
     const userSnapshot = await getDocs(userQuery)
     
     if (!userSnapshot.empty) {
-      userData = userSnapshot.docs[0].data()
+      return userSnapshot.docs[0].data()
     }
   } catch (error) {
     console.error('Error loading user data in router:', error)
-  } finally {
-    userDataLoaded = true
   }
-}
-
-// Set up auth state listener
-onAuthStateChanged(auth, async (user) => {
-  isAuthenticated = !!user
-  authStateResolved = true
   
-  // Load user data
-  await loadUserData(user)
-})
+  return null
+}
 
 // Navigation guard for auth-required routes
 router.beforeEach(async (to, from, next) => {
@@ -181,28 +164,29 @@ router.beforeEach(async (to, from, next) => {
   
   // Check auth requirements
   if (to.meta.requiresAuth) {
-    // Wait for auth state to be resolved if it hasn't been yet
-    if (!authStateResolved) {
+    // Get current user
+    const currentUser = auth.currentUser
+    
+    // If no user, wait for auth state
+    if (!currentUser) {
       await new Promise(resolve => {
-        const unsubscribe = onAuthStateChanged(auth, () => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
           unsubscribe()
-          resolve()
+          resolve(user)
         })
       })
     }
     
-    if (!isAuthenticated) {
+    // Check again after waiting
+    if (!auth.currentUser) {
       next({ name: 'login', query: { return: to.fullPath } })
       return
     }
     
-    // Wait for user data to be loaded if we need to check permissions
-    if ((to.meta.requiresArtist || to.meta.requiresRosterAccess || to.meta.requiresAdmin) && !userDataLoaded) {
-      // Re-load user data if needed
-      const user = auth.currentUser
-      if (user && !userData) {
-        await loadUserData(user)
-      }
+    // Load user data fresh for permission checks
+    let userData = null
+    if (to.meta.requiresArtist || to.meta.requiresRosterAccess || to.meta.requiresAdmin) {
+      userData = await loadUserData(auth.currentUser)
     }
     
     // Now check specific permissions
@@ -210,6 +194,7 @@ router.beforeEach(async (to, from, next) => {
       next({ name: 'create-artist' })
     } else if (to.meta.requiresRosterAccess && !['admin', 'label', 'manager'].includes(userData?.userType)) {
       // Redirect non-authorized users
+      console.log('User does not have roster access:', userData?.userType)
       next({ name: 'discover' })
     } else if (to.meta.requiresAdmin && userData?.userType !== 'admin') {
       // Redirect non-admin users
