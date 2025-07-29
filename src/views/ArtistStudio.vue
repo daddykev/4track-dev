@@ -662,9 +662,28 @@ const handleArtworkFileSelect = (event) => {
   modalError.value = ''
 }
 
-const uploadFile = async (file, path) => {
+const uploadFile = async (file, path, isAudio = false) => {
   const fileRef = storageRef(storage, path)
-  const uploadTask = uploadBytesResumable(fileRef, file)
+  
+  // Set proper metadata for the file
+  const metadata = {
+    contentType: file.type,
+    customMetadata: {
+      originalName: file.name,
+      uploadedAt: new Date().toISOString()
+    }
+  }
+  
+  // For audio files, force download with Content-Disposition header
+  if (isAudio) {
+    metadata.contentDisposition = `attachment; filename="${encodeURIComponent(file.name)}"`
+    // Ensure proper audio content type
+    if (!metadata.contentType || metadata.contentType === 'application/octet-stream') {
+      metadata.contentType = 'audio/mpeg'
+    }
+  }
+  
+  const uploadTask = uploadBytesResumable(fileRef, file, metadata)
   
   return new Promise((resolve, reject) => {
     uploadTask.on(
@@ -744,7 +763,9 @@ const saveTrack = async () => {
       const audioMetadata = await extractAudioMetadata(trackForm.value.audioFile)
       
       const audioPath = `${user.uid}/medley/${artist.value.id}/audio/${Date.now()}_${trackForm.value.audioFile.name}`
-      trackData.audioUrl = await uploadFile(trackForm.value.audioFile, audioPath)
+      
+      // Pass true as third parameter to indicate this is an audio file
+      trackData.audioUrl = await uploadFile(trackForm.value.audioFile, audioPath, true)
       trackData.audioPath = audioPath
       trackData.audioFilename = trackForm.value.audioFile.name
       trackData.audioSize = trackForm.value.audioFile.size
