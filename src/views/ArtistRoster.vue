@@ -69,7 +69,13 @@ const loadData = async () => {
     }
     
     // Load accessible artists
-    artists.value = await getAccessibleArtists(userData.value)
+    const accessibleArtists = await getAccessibleArtists(userData.value)
+    
+    // Load artist photos (thumbnails)
+    await loadArtistPhotos(accessibleArtists)
+    
+    // Set the artists with loaded thumbnails
+    artists.value = accessibleArtists
     
     // Load platform stats for admins
     if (isAdmin.value) {
@@ -82,6 +88,31 @@ const loadData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const loadArtistPhotos = async (artistsList) => {
+  // Load primary photos for all artists in parallel
+  const photoPromises = artistsList.map(async (artist) => {
+    try {
+      const photosQuery = query(
+        collection(db, 'artistPhotos'),
+        where('artistId', '==', artist.id),
+        where('isPrimary', '==', true)
+      )
+      
+      const photosSnapshot = await getDocs(photosQuery)
+      
+      if (!photosSnapshot.empty) {
+        const primaryPhoto = photosSnapshot.docs[0].data()
+        // Set the thumbnail on the artist object
+        artist.primaryPhotoThumbnail = primaryPhoto.croppedThumbnailUrl || primaryPhoto.thumbnailUrl
+      }
+    } catch (error) {
+      console.error(`Error loading photo for artist ${artist.name}:`, error)
+    }
+  })
+  
+  await Promise.all(photoPromises)
 }
 
 const formatSlug = (name) => {
@@ -303,8 +334,8 @@ onMounted(() => {
         <div v-for="artist in artists" :key="artist.id" class="card">
           <div class="artist-header">
             <img 
-              v-if="artist.profileImageUrl" 
-              :src="artist.profileImageUrl" 
+              v-if="artist.primaryPhotoThumbnail || artist.profileImageUrl" 
+              :src="artist.primaryPhotoThumbnail || artist.profileImageUrl" 
               :alt="artist.name"
               class="artist-avatar"
             />

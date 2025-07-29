@@ -122,7 +122,7 @@ const loadContent = async () => {
 
 // Load artist primary photo
 const loadArtistPhoto = async (artist) => {
-  if (artist.profileImageUrl) return // Already has an image
+  // Don't return early - always check for cropped thumbnails
   
   try {
     const photosQuery = query(
@@ -135,7 +135,15 @@ const loadArtistPhoto = async (artist) => {
     
     if (!photosSnapshot.empty) {
       const primaryPhoto = photosSnapshot.docs[0].data()
-      artist.primaryPhotoThumbnail = primaryPhoto.thumbnailUrl
+      // Use cropped thumbnail if available, otherwise use regular thumbnail
+      artist.primaryPhotoThumbnail = primaryPhoto.croppedThumbnailUrl || primaryPhoto.thumbnailUrl
+      console.log(`Artist ${artist.name} photo:`, {
+        hasCropped: !!primaryPhoto.croppedThumbnailUrl,
+        thumbnail: artist.primaryPhotoThumbnail
+      })
+    } else {
+      // No artist photos in the collection, keep the profileImageUrl as fallback
+      console.log(`Artist ${artist.name} has no photos in collection, using profileImageUrl`)
     }
   } catch (error) {
     console.error('Error loading artist photo:', error)

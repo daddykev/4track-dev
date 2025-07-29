@@ -32,6 +32,7 @@ const showCopyModal = ref(false)
 const downloadUrls = ref({})
 const purchasingTrack = ref(null)
 const purchaseError = ref(null)
+const artistPhotoLoading = ref(true)
 
 // Add sessionId for analytics
 const sessionId = ref(null)
@@ -87,11 +88,18 @@ const formattedDuration = computed(() => {
 })
 
 const artistThumbnail = computed(() => {
-  // Check for primary photo thumbnail first (from ArtistPhotos feature)
+  // Don't return anything while loading to prevent high-res flash
+  if (artistPhotoLoading.value) {
+    return null
+  }
+  
+  // Check for primary photo thumbnail first (including cropped version)
   if (artist.value?.primaryPhotoThumbnail) {
     return artist.value.primaryPhotoThumbnail
   }
-  // Fall back to other image sources
+  
+  // Fall back to profile image or other sources
+  // But these might be high-res, so consider if we want to use them
   return artist.value?.profileImageUrl || 
          artist.value?.coverImageUrl ||
          artist.value?.imageUrl ||
@@ -218,6 +226,9 @@ const loadMedley = async () => {
       ...artistSnapshot.docs[0].data()
     }
     
+    // Load artist's primary photo (including cropped version)
+    await loadArtistPrimaryPhoto()
+    
     // Create a medley object from artist data
     medley.value = {
       id: artist.value.id,
@@ -267,6 +278,41 @@ const loadMedley = async () => {
     error.value = 'Failed to load medley'
   } finally {
     loading.value = false
+  }
+}
+
+// Load artist primary photo
+const loadArtistPrimaryPhoto = async () => {
+  if (!artist.value?.id) return
+  
+  artistPhotoLoading.value = true
+  
+  try {
+    const photosQuery = query(
+      collection(db, 'artistPhotos'),
+      where('artistId', '==', artist.value.id),
+      where('isPrimary', '==', true)
+    )
+    
+    const photosSnapshot = await getDocs(photosQuery)
+    
+    if (!photosSnapshot.empty) {
+      const primaryPhoto = photosSnapshot.docs[0].data()
+      // Use cropped thumbnail if available
+      artist.value.primaryPhotoThumbnail = primaryPhoto.croppedThumbnailUrl || primaryPhoto.thumbnailUrl
+      console.log('Loaded artist photo:', {
+        cropped: !!primaryPhoto.croppedThumbnailUrl,
+        thumbnail: primaryPhoto.thumbnailUrl,
+        final: artist.value.primaryPhotoThumbnail
+      })
+    } else {
+      // No artist photos, use profileImageUrl if available
+      console.log('No artist photos found, using profileImageUrl:', artist.value.profileImageUrl)
+    }
+  } catch (error) {
+    console.error('Error loading artist primary photo:', error)
+  } finally {
+    artistPhotoLoading.value = false
   }
 }
 
@@ -644,13 +690,14 @@ watch(() => currentUser.value, async (newUser) => {
     <div v-if="artist" class="artist-header-bar">
       <div class="artist-info-compact">
         <div class="artist-identity">
-          <img 
-            v-if="artistThumbnail"
-            :src="artistThumbnail" 
-            :alt="artist.name"
-            class="artist-avatar"
-            @error="handleImageError('artist-avatar', $event)"
-          />
+          <template v-if="!artistPhotoLoading && artistThumbnail">
+            <img 
+              :src="artistThumbnail" 
+              :alt="artist.name"
+              class="artist-avatar"
+              @error="handleImageError('artist-avatar', $event)"
+            />
+          </template>
           <div v-else class="artist-avatar-placeholder">
             <font-awesome-icon :icon="['fas', 'user']" />
           </div>
