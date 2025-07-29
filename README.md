@@ -10,33 +10,75 @@
 ## ✨ Features
 
 ### 🎤 For Artists
-- **Direct Monetization** - 100% of revenue goes directly to your PayPal
-- **Audio Player** - Upload up to 4 tracks with custom artwork
-- **Flexible Pricing** - Set prices from $0-10 per track or offer free downloads
-- **Public Sharing** - Get your own shareable link at `4track.io/yourname`
-- **Photo Gallery** - Upload high-resolution photos with artistic filters
-- **Real-time Analytics** - Track plays, hearts, downloads, and revenue
-- **Email Verification** - Secure artist onboarding with verification workflow
-- **Collaborator Royalty Splits** - Automatically split royalty payments between collaborators
+- **Artist Studio** - Combined dashboard for profile management and medley creation
+- **Audio Player Management** - Upload up to 4 tracks with custom artwork
+- **Direct Payments** - 100% of revenue goes directly to your PayPal
+- **Collaborator Royalty Splits** - Automatically split payments between multiple artists
+- **Flexible Pricing** - Set prices from $1-10 per track
+- **Download Control** - Choose stream-only or allow downloads
+- **Public Link** - Share your medley at `4track.io/yourname`
+- **Audio Player Visibility** - Toggle public/hidden status
+- **Basic Analytics** - Track plays, hearts, downloads, and revenue
+- **Photo Gallery** - Upload high-resolution photos with automatic thumbnails
+- **Circular Crop Editor** - Interactive drag-to-position cropping for profile photos
+- **Photo Lab** - Apply artistic filters to your photos
 
 ### 🎧 For Listeners
-- **Music Discovery** - Browse artists by genre and style
-- **Direct Support** - Pay artists directly with no platform fees
-- **Music Collection** - Save favorites and build your library
-- **Instant Downloads** - Access purchased tracks immediately
-- **Heart System** - Save tracks for later purchase
+- **Music Feed** - Discover music through an infinite-scroll feed
+- **Mixed Content** - See tracks and artists in a curated 2:1 pattern
+- **In-Feed Player** - Play tracks without leaving the discover page
+- **Track Queue** - Continuous playback through the feed
+- **Music Collection** - Save and purchase tracks
+- **Direct Support** - Pay artists directly via PayPal
+- **Download Library** - Access purchased tracks anytime
+- **Heart Tracks** - Save favorites for later purchase
+- **See Collaborators** - View all artists featured on a track
+- **Audio Quality Display** - See format details (bit depth, sample rate, etc.)
+- **No Account Required** - Stream music without signing up
 
-### 🤝 For Collaborators
-- **Automatic Payment Splitting** - Define percentage splits for each track
-- **Direct PayPal Payouts** - Each collaborator receives their share directly
-- **Flexible Configurations** - Different splits per track
-- **Primary Artist Protection** - Ensure main artist is always included
+### 🏢 For Labels & Managers  
+- **Artist Roster** - Centralized multi-artist management
+- **Create Artists** - Add new artist profiles with Spotify integration
+- **Hierarchical Access** - Manage multiple artists from one account
+- **Role-Based Permissions** - Admin sees all, others see their artists
+- **Quick Actions** - Navigate to artist studios or public pages
+- **Aggregated Analytics** - View performance across all artists
+
+### 👨‍💼 For Admins
+- **User Management** - View all platform users and their roles
+- **Application Review** - Approve/deny artist applications
+- **Platform Stats** - Monitor user growth and activity
+- **Access Control** - Admin-only routes and features
+- **Invite Code Management** - Control platform access
+
+### 📷 Photo Features
+- **High-Resolution Upload** - Support for images up to 20MB
+- **Automatic Thumbnails** - WebP format, 1000px, 85% quality
+- **Primary Photo Selection** - Set main profile image
+- **Circular Crop Editor** - Perfect framing for profile photos
+- **Photo Lab Filters** - 10 artistic filters including Vintage, Ocean, Pink Aura
+- **Original Preservation** - Keep originals for re-editing
+
+### 🤝 Collaborator Features
+- **Flexible Splits** - Define exact percentage for each collaborator
+- **Automatic Distribution** - PayPal sends payments directly to each person
 - **Equal Split Calculator** - One-click to divide royalties equally
+- **Primary Artist Protection** - Main artist cannot be removed
+- **Real-time Validation** - Ensures splits always total 100%
+- **Multi-Party Payments** - Uses PayPal's purchase units for simultaneous payouts
+- **Partial Payment Handling** - System continues if some payments fail
+- **Transaction Transparency** - All splits recorded in royalty records
 
-### 📊 For Labels & Managers
-- **Artist Roster** - Manage multiple artists from one dashboard
-- **Hierarchical Access** - Role-based permissions system
-- **Aggregated Analytics** - Revenue and engagement across all artists
+### 🔐 Authentication & Security
+- **Email Verification** - Required for artist features
+- **Google Sign-In** - Pre-verified authentication option
+- **Invite Codes** - Control platform access during beta
+- **Secure Sessions** - JWT-based authentication
+- **Role-Based Access** - Consumer, Artist, Label, Manager, Admin roles
+- **No Tracking Cookies** - Zero persistent tracking
+- **Session-Based Analytics** - Privacy-first approach
+- **GDPR/CCPA Compliant** - Minimal data collection
+- **User Control** - Full data export and deletion rights
 
 ## 🛠 Tech Stack
 
