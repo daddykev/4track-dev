@@ -1,216 +1,5 @@
-<template>
-  <div class="page-container">
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p class="text-secondary">Loading your collection...</p>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="text-center p-xl">
-      <p class="text-danger mb-lg">{{ error }}</p>
-      <button @click="loadCollection" class="btn btn-primary">
-        <font-awesome-icon :icon="['fas', 'arrows-rotate']" />
-        Try Again
-      </button>
-    </div>
-
-    <!-- Music Collection -->
-    <div v-else>
-      <!-- Header -->
-      <div class="mb-xl">
-        <h1 class="text-primary mb-sm" style="font-size: 2.5rem;">
-          <font-awesome-icon :icon="['fas', 'heart']" class="mr-sm" />
-          My Music Collection
-        </h1>
-        <p class="text-secondary">
-          All your saved and purchased tracks in one place
-        </p>
-      </div>
-
-      <!-- Filter Tabs -->
-      <div v-if="collectionItems.length > 0" class="filter-tabs mb-lg">
-        <button 
-          @click="filterType = 'all'"
-          class="filter-tab"
-          :class="{ 'active': filterType === 'all' }"
-        >
-          All ({{ collectionItems.length }})
-        </button>
-        <button 
-          @click="filterType = 'purchased'"
-          class="filter-tab"
-          :class="{ 'active': filterType === 'purchased' }"
-        >
-          Purchased ({{ collectionItems.filter(i => i.isPurchased).length }})
-        </button>
-        <button 
-          @click="filterType = 'hearted'"
-          class="filter-tab"
-          :class="{ 'active': filterType === 'hearted' }"
-        >
-          Saved ({{ collectionItems.filter(i => !i.isPurchased).length }})
-        </button>
-      </div>
-
-      <!-- Empty State -->
-      <div v-if="filteredItems.length === 0" class="empty-state">
-        <div class="empty-icon">
-          <font-awesome-icon :icon="['fas', 'compact-disc']" />
-        </div>
-        <h3 class="text-primary mb-md">
-          {{ filterType === 'purchased' ? 'No purchased tracks yet' : 
-             filterType === 'hearted' ? 'No saved tracks yet' : 
-             'No tracks yet' }}
-        </h3>
-        <p class="text-secondary mb-lg">
-          {{ filterType === 'purchased' ? 'Purchase tracks from artist medleys to download them anytime' : 
-             filterType === 'hearted' ? 'Save tracks you love by clicking the heart icon' : 
-             'Start building your collection by saving or purchasing tracks from artist medleys' }}
-        </p>
-        <router-link to="/discover" class="btn btn-primary">
-          Discover Music
-        </router-link>
-      </div>
-
-      <!-- Collection by Artist -->
-      <div v-else>
-        <div 
-          v-for="(artistData, artistName) in filteredItemsByArtist" 
-          :key="artistName"
-          class="artist-section"
-        >
-          <!-- Artist Header -->
-          <div class="artist-header">
-            <div class="artist-info">
-              <img 
-                v-if="artistData.artist.profileImage" 
-                :src="artistData.artist.profileImage" 
-                :alt="artistName"
-                class="artist-avatar"
-              />
-              <div v-else class="artist-avatar-placeholder">
-                <font-awesome-icon :icon="['fas', 'user-music']" />
-              </div>
-              <div>
-                <h3 class="artist-name">{{ artistName }}</h3>
-                <p class="artist-track-count">
-                  {{ artistData.tracks.length }} track{{ artistData.tracks.length !== 1 ? 's' : '' }}
-                </p>
-              </div>
-            </div>
-            <button 
-              v-if="artistData.artist.customSlug"
-              @click="listenToTrack(artistData.tracks[0])"
-              class="btn btn-sm btn-secondary"
-            >
-              <font-awesome-icon :icon="['fas', 'play']" />
-              View Medley
-            </button>
-          </div>
-
-          <!-- Track Grid -->
-          <div class="tracks-grid">
-            <div 
-              v-for="item in artistData.tracks" 
-              :key="item.id"
-              class="track-card"
-              :class="{ 'purchased': item.isPurchased }"
-            >
-              <!-- Track Artwork -->
-              <div class="track-artwork">
-                <img 
-                  v-if="item.track.artworkUrl" 
-                  :src="item.track.artworkUrl" 
-                  :alt="item.track.title"
-                />
-                <div v-else class="artwork-placeholder">
-                  <font-awesome-icon :icon="['fas', 'music']" />
-                </div>
-                <div v-if="item.isPurchased" class="purchased-badge">
-                  <font-awesome-icon :icon="['fas', 'check']" />
-                </div>
-              </div>
-
-              <!-- Track Info -->
-              <div class="track-info">
-                <h4 class="track-title">{{ item.track.title || 'Unknown Track' }}</h4>
-                <p v-if="item.track.description" class="track-description">
-                  {{ item.track.description }}
-                </p>
-                <div class="track-meta">
-                  <span class="meta-item">
-                    <font-awesome-icon :icon="['fas', 'calendar']" class="mr-xs" />
-                    {{ formatDate(item.timestamp) }}
-                  </span>
-                  <span v-if="item.isPurchased" class="meta-item">
-                    <font-awesome-icon :icon="['fas', 'dollar-sign']" class="mr-xs" />
-                    {{ formatPrice(item) }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Track Actions -->
-              <div class="track-actions">
-                <!-- If purchased and downloadable, show download button -->
-                <button 
-                  v-if="item.isPurchased && item.track.allowDownload !== false"
-                  @click="downloadTrack(item)"
-                  class="btn btn-primary btn-sm"
-                  :disabled="downloadingTrack === item.id"
-                >
-                  <font-awesome-icon 
-                    :icon="downloadingTrack === item.id ? ['fas', 'spinner'] : ['fas', 'download']"
-                    :class="{ 'fa-spin': downloadingTrack === item.id }"
-                  />
-                  {{ downloadingTrack === item.id ? 'Downloading...' : 'Download' }}
-                </button>
-                
-                <!-- If purchased but stream-only -->
-                <span v-else-if="item.isPurchased && !item.track.allowDownload" class="stream-only-badge">
-                  <font-awesome-icon :icon="['fas', 'lock']" />
-                  Stream Only
-                </span>
-                
-                <!-- If not purchased, show purchase button -->
-                <button 
-                  v-else-if="!item.isPurchased"
-                  @click="purchaseTrack(item)"
-                  class="btn btn-success btn-sm"
-                  :disabled="purchasingTrack === item.id"
-                >
-                  <font-awesome-icon 
-                    :icon="purchasingTrack === item.id ? ['fas', 'spinner'] : ['fas', 'download']"
-                    :class="{ 'fa-spin': purchasingTrack === item.id }"
-                  />
-                  {{ purchasingTrack === item.id ? 'Processing...' : 
-                     (item.track.price > 0 ? `Buy $${item.track.price.toFixed(2)}` : 'Get Free') }}
-                </button>
-                
-                <!-- Remove button (only for non-purchased) -->
-                <button 
-                  v-if="!item.isPurchased"
-                  @click="removeFromCollection(item)"
-                  class="btn btn-sm btn-danger"
-                  :disabled="removingTrack === item.id"
-                  title="Remove from collection"
-                >
-                  <font-awesome-icon 
-                    :icon="removingTrack === item.id ? ['fas', 'spinner'] : ['fas', 'times']"
-                    :class="{ 'fa-spin': removingTrack === item.id }"
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { auth, db } from '@/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { 
@@ -280,6 +69,32 @@ onMounted(() => {
     }
   })
 })
+
+// Load artist photos (matching ArtistRoster.vue)
+const loadArtistPhotos = async (artists) => {
+  // Load primary photos for all artists in parallel
+  const photoPromises = Array.from(artists.values()).map(async (artist) => {
+    try {
+      const photosQuery = query(
+        collection(db, 'artistPhotos'),
+        where('artistId', '==', artist.id),
+        where('isPrimary', '==', true)
+      )
+      
+      const photosSnapshot = await getDocs(photosQuery)
+      
+      if (!photosSnapshot.empty) {
+        const primaryPhoto = photosSnapshot.docs[0].data()
+        // Set the thumbnail on the artist object
+        artist.primaryPhotoThumbnail = primaryPhoto.croppedThumbnailUrl || primaryPhoto.thumbnailUrl
+      }
+    } catch (error) {
+      console.error(`Error loading photo for artist ${artist.name}:`, error)
+    }
+  })
+  
+  await Promise.all(photoPromises)
+}
 
 const loadCollection = async () => {
   loading.value = true
@@ -430,6 +245,10 @@ const loadCollection = async () => {
       fetched: artistsFetched,
       errors: artistsErrors
     })
+    
+    // Load artist photos
+    console.log('📸 Loading artist photos...')
+    await loadArtistPhotos(artists)
     
     // Combine collection data with track and artist details
     console.log('🔧 Combining collection data...')
@@ -607,13 +426,231 @@ const formatPrice = (item) => {
 }
 </script>
 
-<!-- Keep all the existing styles -->
+<template>
+  <div class="music-collection">
+    <div class="page-container">
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p class="text-secondary">Loading your collection...</p>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="text-center p-xl">
+        <p class="text-danger mb-lg">{{ error }}</p>
+        <button @click="loadCollection" class="btn btn-primary">
+          <font-awesome-icon :icon="['fas', 'rotate']" />
+          Try Again
+        </button>
+      </div>
+
+      <!-- Music Collection -->
+      <div v-else>
+        <!-- Header -->
+        <div class="mb-xl">
+          <h1 class="text-primary mb-sm" style="font-size: 2.5rem;">
+            <font-awesome-icon :icon="['fas', 'heart']" class="mr-sm" />
+            My Music Collection
+          </h1>
+          <p class="text-secondary">
+            All your saved and purchased tracks in one place
+          </p>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div v-if="collectionItems.length > 0" class="filter-tabs mb-lg">
+          <button 
+            @click="filterType = 'all'"
+            class="filter-tab"
+            :class="{ 'active': filterType === 'all' }"
+          >
+            All ({{ collectionItems.length }})
+          </button>
+          <button 
+            @click="filterType = 'purchased'"
+            class="filter-tab"
+            :class="{ 'active': filterType === 'purchased' }"
+          >
+            Purchased ({{ collectionItems.filter(i => i.isPurchased).length }})
+          </button>
+          <button 
+            @click="filterType = 'hearted'"
+            class="filter-tab"
+            :class="{ 'active': filterType === 'hearted' }"
+          >
+            Saved ({{ collectionItems.filter(i => !i.isPurchased).length }})
+          </button>
+        </div>
+
+        <!-- Empty State -->
+        <div v-if="filteredItems.length === 0" class="empty-state">
+          <div class="empty-icon">
+            <font-awesome-icon :icon="['fas', 'compact-disc']" />
+          </div>
+          <h3 class="text-primary mb-md">
+            {{ filterType === 'purchased' ? 'No purchased tracks yet' : 
+               filterType === 'hearted' ? 'No saved tracks yet' : 
+               'No tracks yet' }}
+          </h3>
+          <p class="text-secondary mb-lg">
+            {{ filterType === 'purchased' ? 'Purchase tracks from artist medleys to download them anytime' : 
+               filterType === 'hearted' ? 'Save tracks you love by clicking the heart icon' : 
+               'Start building your collection by saving or purchasing tracks from artist medleys' }}
+          </p>
+          <router-link to="/discover" class="btn btn-primary">
+            Discover Music
+          </router-link>
+        </div>
+
+        <!-- Collection by Artist -->
+        <div v-else>
+          <div 
+            v-for="(artistData, artistName) in filteredItemsByArtist" 
+            :key="artistName"
+            class="artist-section"
+          >
+            <!-- Artist Header -->
+            <div class="artist-header">
+              <div class="artist-info">
+                <img 
+                  v-if="artistData.artist.primaryPhotoThumbnail || artistData.artist.profileImageUrl" 
+                  :src="artistData.artist.primaryPhotoThumbnail || artistData.artist.profileImageUrl" 
+                  :alt="artistName"
+                  class="artist-avatar"
+                />
+                <div v-else class="artist-avatar-placeholder">
+                  <font-awesome-icon :icon="['fas', 'user-music']" />
+                </div>
+                <div>
+                  <h3 class="artist-name">{{ artistName }}</h3>
+                  <p class="artist-track-count">
+                    {{ artistData.tracks.length }} track{{ artistData.tracks.length !== 1 ? 's' : '' }}
+                  </p>
+                </div>
+              </div>
+              <button 
+                v-if="artistData.artist.customSlug"
+                @click="listenToTrack(artistData.tracks[0])"
+                class="btn btn-sm btn-secondary"
+              >
+                <font-awesome-icon :icon="['fas', 'play']" />
+                View Medley
+              </button>
+            </div>
+
+            <!-- Track Grid -->
+            <div class="tracks-grid">
+              <div 
+                v-for="item in artistData.tracks" 
+                :key="item.id"
+                class="track-card"
+                :class="{ 'purchased': item.isPurchased }"
+              >
+                <!-- Track Artwork -->
+                <div class="track-artwork">
+                  <img 
+                    v-if="item.track.artworkUrl" 
+                    :src="item.track.artworkUrl" 
+                    :alt="item.track.title"
+                  />
+                  <div v-else class="artwork-placeholder">
+                    <font-awesome-icon :icon="['fas', 'music']" />
+                  </div>
+                  <div v-if="item.isPurchased" class="purchased-badge">
+                    <font-awesome-icon :icon="['fas', 'check']" />
+                  </div>
+                </div>
+
+                <!-- Track Info -->
+                <div class="track-info">
+                  <h4 class="track-title">{{ item.track.title || 'Unknown Track' }}</h4>
+                  <p v-if="item.track.description" class="track-description">
+                    {{ item.track.description }}
+                  </p>
+                  <div class="track-meta">
+                    <span class="meta-item">
+                      <font-awesome-icon :icon="['fas', 'calendar']" class="mr-xs" />
+                      {{ formatDate(item.timestamp) }}
+                    </span>
+                    <span v-if="item.isPurchased" class="meta-item">
+                      <font-awesome-icon :icon="['fas', 'dollar-sign']" class="mr-xs" />
+                      {{ formatPrice(item) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Track Actions -->
+                <div class="track-actions">
+                  <!-- If purchased and downloadable, show download button -->
+                  <button 
+                    v-if="item.isPurchased && item.track.allowDownload !== false"
+                    @click="downloadTrack(item)"
+                    class="btn btn-primary btn-sm"
+                    :disabled="downloadingTrack === item.id"
+                  >
+                    <font-awesome-icon 
+                      :icon="downloadingTrack === item.id ? ['fas', 'spinner'] : ['fas', 'download']"
+                      :class="{ 'fa-spin': downloadingTrack === item.id }"
+                    />
+                    {{ downloadingTrack === item.id ? 'Downloading...' : 'Download' }}
+                  </button>
+                  
+                  <!-- If purchased but stream-only -->
+                  <span v-else-if="item.isPurchased && !item.track.allowDownload" class="stream-only-badge">
+                    <font-awesome-icon :icon="['fas', 'lock']" />
+                    Stream Only
+                  </span>
+                  
+                  <!-- If not purchased, show purchase button -->
+                  <button 
+                    v-else-if="!item.isPurchased"
+                    @click="purchaseTrack(item)"
+                    class="btn btn-success btn-sm"
+                    :disabled="purchasingTrack === item.id"
+                  >
+                    <font-awesome-icon 
+                      :icon="purchasingTrack === item.id ? ['fas', 'spinner'] : ['fas', 'download']"
+                      :class="{ 'fa-spin': purchasingTrack === item.id }"
+                    />
+                    {{ purchasingTrack === item.id ? 'Processing...' : 
+                       (item.track.price > 0 ? `Buy $${item.track.price.toFixed(2)}` : 'Get Free') }}
+                  </button>
+                  
+                  <!-- Remove button (only for non-purchased) -->
+                  <button 
+                    v-if="!item.isPurchased"
+                    @click="removeFromCollection(item)"
+                    class="btn btn-sm btn-danger"
+                    :disabled="removingTrack === item.id"
+                    title="Remove from collection"
+                  >
+                    <font-awesome-icon 
+                      :icon="removingTrack === item.id ? ['fas', 'spinner'] : ['fas', 'times']"
+                      :class="{ 'fa-spin': removingTrack === item.id }"
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <style scoped>
+/* Page wrapper to match ArtistRoster */
+.music-collection {
+  min-height: 100vh;
+  background: var(--bg-secondary);
+}
+
 /* Filter Tabs */
 .filter-tabs {
   display: flex;
   gap: var(--spacing-sm);
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   padding: var(--spacing-sm);
   border-radius: var(--radius-lg);
   width: fit-content;
@@ -820,7 +857,7 @@ const formatPrice = (item) => {
 .empty-state {
   text-align: center;
   padding: var(--spacing-2xl);
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   max-width: 500px;
   margin: 0 auto;
