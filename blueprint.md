@@ -99,8 +99,9 @@ fourtrack-os/
 │   └── firebase.js             # Firebase configuration
 │
 ├── functions/                  # Cloud Functions
-│   ├── index.js                # Main cloud functions including PayPal processing
-│   └── analyticsFunctions.js   # Privacy-focused analytics
+│   ├── index.js                # Main cloud functions entry point
+│   ├── analyticsFunctions.js   # Privacy-focused analytics
+│   └── paypalFunctions.js      # PayPal payment processing and order management
 │
 ├── public/                     # Static assets
 │   ├── favicon.ico
@@ -529,7 +530,9 @@ Admin interface for artist application review:
 
 ### Core Functions
 
-#### createMedleyPayPalOrder
+#### PayPal Functions (paypalFunctions.js)
+
+##### createMedleyPayPalOrder
 Enhanced with multi-party payment support:
 - Creates PayPal checkout for track purchase
 - Validates pricing and availability
@@ -541,7 +544,7 @@ Enhanced with multi-party payment support:
 - **Adjusts for rounding errors on primary artist**
 - Returns checkout URL for redirect
 
-#### captureMedleyPayment
+##### captureMedleyPayment
 Enhanced to handle split payments:
 - Captures PayPal payment after approval
 - **Handles both COMPLETED and PARTIALLY_COMPLETED status**
@@ -553,16 +556,29 @@ Enhanced to handle split payments:
 - Handles free downloads
 - **Logs warnings for partial payments**
 
-#### collectAnalytics
+##### processMedleyFreeDownload
+- Handles free track downloads
+- Records download in royalties collection
+- Generates time-limited download URL
+- Requires authentication
+
+#### Analytics Functions (analyticsFunctions.js)
+
+##### collectAnalytics
 - Privacy-focused event tracking
 - No personal data storage
 - Geographic aggregation only
 
-#### Artist Roster Management
-- Multi-artist overview for label/manager accounts
-- Create new artist profiles with optional Spotify import
-- Hierarchical permission system
-- Quick access to artist medleys and public pages
+#### Other Functions (index.js)
+
+##### getMedleyAnalytics
+- Retrieves analytics for artist dashboard
+- Aggregates revenue and download data
+- Provides track-specific analytics
+
+##### addToCollection / removeFromCollection
+- Manages user's music collection
+- Tracks hearted and purchased items
 
 ## User Types & Access Control
 
