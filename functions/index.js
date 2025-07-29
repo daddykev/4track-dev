@@ -283,8 +283,7 @@ exports.createMedleyPayPalOrder = onCall({
   }
 });
 
-// Update the captureMedleyPayment function to handle reference_id
-// Update the captureMedleyPayment function to handle partial captures
+// Update the captureMedleyPayment function with extensive logging
 exports.captureMedleyPayment = onCall({
   secrets: [PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET],
   cors: true
@@ -295,6 +294,9 @@ exports.captureMedleyPayment = onCall({
     throw new Error('Order ID is required');
   }
   
+  // Add this at the beginning of captureMedleyPayment function
+  console.log('Running as service account:', process.env.FUNCTION_IDENTITY || 'default');
+
   console.log('Attempting to capture PayPal order:', orderId);
   
   try {
@@ -315,6 +317,9 @@ exports.captureMedleyPayment = onCall({
     const captureData = captureResponse.data;
     console.log('PayPal capture response status:', captureData.status);
     
+    // Log the full structure to understand what we're getting
+    console.log('Full capture response structure:', JSON.stringify(captureData, null, 2));
+    
     // Check if payment was at least partially successful
     if (captureData.status !== 'COMPLETED' && captureData.status !== 'PARTIALLY_COMPLETED') {
       throw new Error(`Payment failed with status: ${captureData.status}`);
@@ -326,11 +331,29 @@ exports.captureMedleyPayment = onCall({
     let purchaseUnitWithCapture = null;
     
     for (const purchaseUnit of captureData.purchase_units) {
+      console.log('Examining purchase unit:', {
+        hasPayments: !!purchaseUnit.payments,
+        hasCaptures: !!(purchaseUnit.payments?.captures),
+        capturesLength: purchaseUnit.payments?.captures?.length || 0,
+        hasCustomId: !!purchaseUnit.custom_id,
+        hasReferenceId: !!purchaseUnit.reference_id,
+        customIdValue: purchaseUnit.custom_id,
+        referenceIdValue: purchaseUnit.reference_id
+      });
+      
       if (purchaseUnit.payments && purchaseUnit.payments.captures && purchaseUnit.payments.captures.length > 0) {
         const capture = purchaseUnit.payments.captures[0];
         if (capture.status === 'COMPLETED') {
           successfulCapture = capture;
           purchaseUnitWithCapture = purchaseUnit;
+          
+          // Also check if custom_id is on the capture itself
+          console.log('Successful capture details:', {
+            captureId: capture.id,
+            hasCustomId: !!capture.custom_id,
+            customIdValue: capture.custom_id
+          });
+          
           break;
         }
       }
@@ -343,24 +366,66 @@ exports.captureMedleyPayment = onCall({
     
     console.log('Found successful capture:', successfulCapture.id);
     
-    // Extract metadata from either custom_id or reference_id
-    if (successfulCapture.custom_id) {
+    // Extract metadata - check multiple possible locations
+    // PayPal might put custom_id at different levels
+    const customId = purchaseUnitWithCapture.custom_id || 
+                     successfulCapture.custom_id || 
+                     captureData.purchase_units[0]?.custom_id;
+                     
+    const referenceId = purchaseUnitWithCapture.reference_id || 
+                        captureData.purchase_units[0]?.reference_id;
+    
+    console.log('Metadata extraction:', {
+      customId,
+      referenceId,
+      hasCustomId: !!customId,
+      hasReferenceId: !!referenceId
+    });
+    
+    // Try to extract trackId and artistId
+    if (customId) {
       // Single payee - parse custom_id
-      const customData = JSON.parse(successfulCapture.custom_id);
-      trackId = customData.trackId;
-      artistId = customData.artistId;
-    } else if (purchaseUnitWithCapture.reference_id) {
+      try {
+        const customData = JSON.parse(customId);
+        trackId = customData.trackId;
+        artistId = customData.artistId;
+        console.log('Successfully parsed custom_id:', { trackId, artistId });
+      } catch (e) {
+        console.error('Error parsing custom_id:', e, 'Value was:', customId);
+        throw new Error('Invalid transaction metadata in custom_id');
+      }
+    } else if (referenceId) {
       // Multiple payees - decode reference_id
-      const decodedRef = Buffer.from(purchaseUnitWithCapture.reference_id, 'base64').toString('utf8');
-      const metadata = JSON.parse(decodedRef);
-      trackId = metadata.trackId;
-      artistId = metadata.artistId;
+      try {
+        console.log('Attempting to decode reference_id:', referenceId);
+        console.log('Reference ID length:', referenceId.length);
+        console.log('Reference ID type:', typeof referenceId);
+        
+        // Try to decode - might fail if not valid base64
+        const decodedRef = Buffer.from(referenceId, 'base64').toString('utf8');
+        console.log('Decoded reference_id:', decodedRef);
+        
+        const metadata = JSON.parse(decodedRef);
+        trackId = metadata.trackId;
+        artistId = metadata.artistId;
+        console.log('Successfully parsed reference_id:', { trackId, artistId });
+      } catch (e) {
+        console.error('Error parsing reference_id:', e);
+        console.error('Reference ID was:', referenceId);
+        console.error('Hex dump:', Buffer.from(referenceId).toString('hex'));
+        
+        // If reference_id fails, look for a fallback in purchase units
+        // This might happen if PayPal modifies our metadata
+        throw new Error('Invalid transaction metadata in reference_id');
+      }
     } else {
-      console.error('No custom_id or reference_id found in capture response');
+      console.error('No custom_id or reference_id found anywhere in response');
+      console.error('Purchase unit keys:', Object.keys(purchaseUnitWithCapture));
+      console.error('Capture keys:', Object.keys(successfulCapture));
       throw new Error('Missing transaction metadata');
     }
     
-    console.log('Track ID:', trackId, 'Artist ID:', artistId);
+    console.log('Final extracted IDs - Track ID:', trackId, 'Artist ID:', artistId);
     
     // Get track details
     const trackDoc = await db.collection('medleyTracks').doc(trackId).get();
@@ -388,9 +453,19 @@ exports.captureMedleyPayment = onCall({
         for (const capture of unit.payments.captures) {
           if (capture.status === 'COMPLETED') {
             let metadata = null;
-            if (unit.reference_id) {
-              const decodedRef = Buffer.from(unit.reference_id, 'base64').toString('utf8');
-              metadata = JSON.parse(decodedRef);
+            // Only try to decode reference_id if it exists and is valid
+            if (unit.reference_id && unit.reference_id.length > 0) {
+              try {
+                // Validate base64 before attempting decode
+                if (/^[A-Za-z0-9+/]+=*$/.test(unit.reference_id)) {
+                  const decodedRef = Buffer.from(unit.reference_id, 'base64').toString('utf8');
+                  metadata = JSON.parse(decodedRef);
+                } else {
+                  console.warn('Reference ID is not valid base64:', unit.reference_id);
+                }
+              } catch (e) {
+                console.warn('Could not decode reference_id for unit, skipping metadata');
+              }
             }
             
             successfulCaptures.push({
@@ -466,15 +541,32 @@ exports.captureMedleyPayment = onCall({
         const [exists] = await file.exists();
         
         if (exists) {
-          const [url] = await file.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
-          });
-          downloadUrl = url;
-          console.log('Download URL generated');
+          // Check if we're in sandbox mode
+          if (PAYPAL_MODE === 'sandbox') {
+            // For sandbox, use the public audioUrl directly
+            downloadUrl = track.audioUrl;
+            console.log('Using public audio URL for download (sandbox mode)');
+          } else {
+            // Production: try signed URL with graceful fallback
+            try {
+              const [url] = await file.getSignedUrl({
+                action: 'read',
+                expires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+              });
+              downloadUrl = url;
+              console.log('Download URL generated');
+            } catch (signError) {
+              console.error('Error generating signed URL:', signError);
+              // Fallback to public URL
+              downloadUrl = track.audioUrl;
+              console.log('Falling back to public audio URL');
+            }
+          }
         }
       } catch (urlError) {
         console.error('Error generating download URL:', urlError);
+        // Fallback to audio URL
+        downloadUrl = track.audioUrl;
       }
     }
     
