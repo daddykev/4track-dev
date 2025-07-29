@@ -263,8 +263,8 @@ const formatDuration = (seconds) => {
   <div class="discover-page">
     <!-- Header -->
     <div class="page-header">
-      <h1>Discover Music</h1>
-      <p>Explore tracks and artists from the 4track community</p>
+      <h1>Discover</h1>
+      <p>Explore tracks and artists on 4track</p>
       
       <!-- Settings Button -->
       <button 

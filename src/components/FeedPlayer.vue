@@ -120,9 +120,9 @@
             <button 
               @click="togglePlay" 
               class="control-btn play-btn"
-              :disabled="!currentTrack"
+              :disabled="!currentTrack || audioLoading"
             >
-              <font-awesome-icon :icon="isPlaying ? ['fas', 'pause'] : ['fas', 'play']" />
+              <font-awesome-icon :icon="audioLoading ? ['fas', 'spinner'] : (isPlaying ? ['fas', 'pause'] : ['fas', 'play'])" :class="{ 'fa-spin': audioLoading }" />
             </button>
             
             <button 
@@ -148,7 +148,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -181,6 +181,7 @@ const router = useRouter()
 // Audio state
 const audioElement = ref(null)
 const isPlaying = ref(false)
+const audioLoading = ref(false)
 const currentTime = ref(0)
 const duration = ref(0)
 
@@ -190,13 +191,35 @@ const isHearted = ref(false)
 const heartingTrack = ref(false)
 const purchasingTrack = ref(false)
 
+// Initialize audio element on mount
+onMounted(() => {
+  initAudio()
+  
+  // If we already have a track, load it
+  if (props.currentTrack) {
+    // Use nextTick to ensure DOM is ready
+    nextTick(() => {
+      loadTrack(props.currentTrack)
+    })
+  }
+})
+
 // Initialize audio element
 const initAudio = () => {
   if (!audioElement.value) {
     audioElement.value = new Audio()
     audioElement.value.crossOrigin = 'anonymous'
+    audioElement.value.preload = 'auto'
     
     // Event listeners
+    audioElement.value.addEventListener('loadstart', () => {
+      audioLoading.value = true
+    })
+    
+    audioElement.value.addEventListener('loadeddata', () => {
+      audioLoading.value = false
+    })
+    
     audioElement.value.addEventListener('loadedmetadata', () => {
       duration.value = audioElement.value.duration
     })
@@ -206,16 +229,20 @@ const initAudio = () => {
     })
     
     audioElement.value.addEventListener('ended', () => {
+      isPlaying.value = false
       if (hasNext.value) {
         nextTrack()
-      } else {
-        isPlaying.value = false
       }
     })
     
     audioElement.value.addEventListener('error', (e) => {
       console.error('Audio loading error:', e)
+      audioLoading.value = false
       isPlaying.value = false
+    })
+    
+    audioElement.value.addEventListener('canplaythrough', () => {
+      audioLoading.value = false
     })
   }
 }
@@ -241,60 +268,122 @@ const hasPrevious = computed(() => props.currentIndex > 0)
 const hasNext = computed(() => props.currentIndex < props.queue.length - 1)
 
 // Watch for track changes
-watch(() => props.currentTrack, (newTrack) => {
-  if (newTrack) {
-    loadTrack(newTrack)
+watch(() => props.currentTrack, async (newTrack, oldTrack) => {
+  // Only load if it's actually a different track
+  if (newTrack && newTrack.id !== oldTrack?.id) {
+    await loadTrack(newTrack)
     checkIfHearted()
   }
 })
 
 // Methods
 const loadTrack = async (track) => {
-  if (!track?.audioUrl) return
-  
-  initAudio()
-  
-  // Stop current playback
-  if (audioElement.value) {
-    audioElement.value.pause()
-    audioElement.value.currentTime = 0
+  if (!track?.audioUrl) {
+    console.error('No audio URL provided for track:', track)
+    return
   }
   
-  // Load new track
-  audioElement.value.src = track.audioUrl
-  audioElement.value.load()
+  // Ensure audio element exists
+  if (!audioElement.value) {
+    initAudio()
+  }
+  
+  audioLoading.value = true
+  
+  // Stop current playback
+  audioElement.value.pause()
+  isPlaying.value = false
   currentTime.value = 0
   
-  // Auto-play
-  startPlayback()
+  // Set new source
+  audioElement.value.src = track.audioUrl
   
-  // Track analytics
-  apiService.trackEvent('play', 'track', track.id, {
-    trackTitle: track.title,
-    source: 'discover_feed'
-  })
+  // Load the new track
+  try {
+    await audioElement.value.load()
+    
+    // Wait a brief moment for the audio to be ready
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // Try to play
+    await startPlayback()
+    
+    // Track analytics - fire and forget
+    apiService.trackEvent('play', 'track', track.id, {
+      trackTitle: track.title,
+      source: 'discover_feed'
+    }).catch(err => console.warn('Analytics error:', err))
+    
+  } catch (error) {
+    console.error('Error loading track:', error)
+    audioLoading.value = false
+  }
 }
 
 const startPlayback = async () => {
   if (!audioElement.value || !props.currentTrack) return
   
   try {
+    // Reset loading state
+    audioLoading.value = true
+    
+    // Create a promise that resolves when audio can play
+    const canPlayPromise = new Promise((resolve, reject) => {
+      const handleCanPlay = () => {
+        audioElement.value.removeEventListener('canplaythrough', handleCanPlay)
+        audioElement.value.removeEventListener('error', handleError)
+        resolve()
+      }
+      
+      const handleError = (e) => {
+        audioElement.value.removeEventListener('canplaythrough', handleCanPlay)
+        audioElement.value.removeEventListener('error', handleError)
+        reject(e)
+      }
+      
+      // Check if already ready
+      if (audioElement.value.readyState >= 3) {
+        resolve()
+      } else {
+        audioElement.value.addEventListener('canplaythrough', handleCanPlay, { once: true })
+        audioElement.value.addEventListener('error', handleError, { once: true })
+        
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          audioElement.value.removeEventListener('canplaythrough', handleCanPlay)
+          audioElement.value.removeEventListener('error', handleError)
+          reject(new Error('Audio loading timeout'))
+        }, 5000)
+      }
+    })
+    
+    await canPlayPromise
+    
+    // Now try to play
     await audioElement.value.play()
     isPlaying.value = true
+    audioLoading.value = false
+    
   } catch (error) {
     console.error('Playback error:', error)
+    audioLoading.value = false
     isPlaying.value = false
+    
+    // If autoplay was blocked, user needs to click play
+    if (error.name === 'NotAllowedError') {
+      console.log('Autoplay blocked - user must click play button')
+    }
   }
 }
 
-const togglePlay = () => {
-  if (!audioElement.value) return
+const togglePlay = async () => {
+  if (!audioElement.value || audioLoading.value) return
   
   if (isPlaying.value) {
     audioElement.value.pause()
     isPlaying.value = false
   } else {
-    startPlayback()
+    await startPlayback()
   }
 }
 
@@ -435,6 +524,7 @@ onUnmounted(() => {
   if (audioElement.value) {
     audioElement.value.pause()
     audioElement.value.src = ''
+    audioElement.value.load()
   }
 })
 </script>

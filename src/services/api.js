@@ -1,3 +1,4 @@
+// services/api.js
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { functions } from '@/firebase'
 
@@ -19,9 +20,9 @@ class ApiService {
   }
 
   // Medley/PayPal Functions
-  async createMedleyPayPalOrder(artistId, trackId) {
+  async createMedleyPayPalOrder(medleyId, trackId) {
     return this.callFunction('createMedleyPayPalOrder', {
-      artistId,  // Changed from medleyId
+      medleyId,
       trackId
     })
   }
@@ -40,25 +41,69 @@ class ApiService {
     })
   }
 
-  // Analytics Functions
+  // Analytics Functions - Updated to use HTTP endpoint correctly
   async trackPageView(pageType, pageId, referrer = null) {
     // Fire and forget for analytics
-    this.callFunction('collectAnalytics', {
+    this.sendAnalytics({
       pageType,
       pageId,
       eventType: 'page_view',
-      referrer
+      metadata: { referrer }
     }).catch(err => console.warn('Analytics error:', err))
   }
 
   async trackEvent(eventType, pageType, pageId, metadata = {}) {
     // Fire and forget for analytics
-    this.callFunction('collectAnalytics', {
+    this.sendAnalytics({
       pageType,
       pageId,
       eventType,
       metadata
     }).catch(err => console.warn('Analytics error:', err))
+  }
+
+  // Helper method to send analytics via HTTP endpoint
+  async sendAnalytics(data) {
+    try {
+      // Add a session ID if not present
+      if (!data.metadata) {
+        data.metadata = {}
+      }
+      if (!data.metadata.sessionId) {
+        data.metadata.sessionId = this.getSessionId()
+      }
+
+      const response = await fetch(`https://us-central1-fourtrack-os.cloudfunctions.net/collectAnalytics`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      })
+
+      if (!response.ok) {
+        throw new Error(`Analytics request failed: ${response.status}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      // Don't throw for analytics errors, just log them
+      console.warn('Analytics error:', error)
+      return null
+    }
+  }
+
+  // Get or create session ID
+  getSessionId() {
+    const key = '4track_session_id'
+    let sessionId = sessionStorage.getItem(key)
+    
+    if (!sessionId) {
+      sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      sessionStorage.setItem(key, sessionId)
+    }
+    
+    return sessionId
   }
 
   // Medley Analytics
