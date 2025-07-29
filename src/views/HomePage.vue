@@ -732,19 +732,24 @@ onMounted(() => {
   }
   
   .hero-title {
-    font-size: 2.6rem; /* Increased by 30% from 2rem */
-    flex-direction: column;
-    gap: var(--spacing-sm);
-    white-space: normal;
+    font-size: 2.6rem;
+    gap: var(--spacing-xs); /* Smaller gap on mobile */
+    white-space: nowrap; /* Keep on one line */
+  }
+  
+  /* Ensure the icon scales properly with the title on mobile */
+  .hero-title .title-icon,
+  .hero-title .custom-icon {
+    font-size: 0.9em; /* Slightly smaller relative to text */
   }
   
   .hero-subtitle {
-    font-size: 1.32rem; /* Increased by 20% from 1.1rem */
+    font-size: 1.32rem;
     margin-bottom: var(--spacing-sm);
   }
 
   .hero-tagline {
-    font-size: 0.99rem; /* Increased by 10% from 0.9rem */
+    font-size: 0.99rem;
     margin-bottom: var(--spacing-xl);
   }
   
@@ -835,11 +840,18 @@ onMounted(() => {
 
 @media (max-width: 480px) {
   .hero-title {
-    font-size: 2.275rem; /* Increased by 30% from 1.75rem */
+    font-size: 2.275rem;
+    gap: 0.25rem; /* Even smaller gap for very small screens */
+  }
+  
+  /* Adjust icon size for smaller screens */
+  .hero-title .title-icon,
+  .hero-title .custom-icon {
+    font-size: 0.85em;
   }
   
   .hero-subtitle {
-    font-size: 1.2rem; /* Increased by 20% from 1rem */
+    font-size: 1.2rem;
   }
   
   .section-title {
