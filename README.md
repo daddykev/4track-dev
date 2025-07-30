@@ -10,23 +10,22 @@
 ## ✨ Features
 
 ### 🎤 For Artists
-- **Artist Studio** - Combined dashboard for profile management and medley creation
-- **Audio Player Management** - Upload up to 4 tracks with custom artwork
-- **Direct Payments** - 100% of revenue goes directly to your PayPal
-- **Collaborator Royalty Splits** - Automatically split payments between multiple artists
+- **Artist Studio** - Combined dashboard for uploads, page settings, and royalties
+- **Audio Player** - Upload up to 4 tracks with custom artwork
+- **Studio Quality Audio** - Supports up to 32-bit, 192 kHz WAV with no transcoding
+- **Direct Payments** - Revenue goes directly to your PayPal
+- **Collaborator Royalty Splits** - Automatically split payments between multiple parties
 - **Flexible Pricing** - Set prices from $1-10 per track
 - **Download Control** - Choose stream-only or allow downloads
 - **Public Link** - Share your medley at `4track.io/yourname`
 - **Audio Player Visibility** - Toggle public/hidden status
 - **Basic Analytics** - Track plays, hearts, downloads, and revenue
 - **Photo Gallery** - Upload high-resolution photos with automatic thumbnails
-- **Circular Crop Editor** - Interactive drag-to-position cropping for profile photos
-- **Photo Lab** - Apply artistic filters to your photos
 
 ### 🎧 For Listeners
 - **Music Feed** - Discover music through an infinite-scroll feed
-- **Mixed Content** - See tracks and artists in a curated 2:1 pattern
-- **In-Feed Player** - Play tracks without leaving the discover page
+- **Mixed Content** - See tracks and artist pages in a curated 2:1 pattern
+- **In-Feed Player** - Play tracks without leaving the feed
 - **Track Queue** - Continuous playback through the feed
 - **Music Collection** - Save and purchase tracks
 - **Direct Support** - Pay artists directly via PayPal
@@ -38,7 +37,7 @@
 
 ### 🏢 For Labels & Managers  
 - **Artist Roster** - Centralized multi-artist management
-- **Create Artists** - Add new artist profiles with Spotify integration
+- **Create Artist Pages** - Add new artist profiles
 - **Hierarchical Access** - Manage multiple artists from one account
 - **Role-Based Permissions** - Admin sees all, others see their artists
 - **Quick Actions** - Navigate to artist studios or public pages
@@ -297,10 +296,10 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - ✅ Email verification
 - ✅ Collaborator royalty splits
 
-### Version 1.0 (Public Launch)
+### Version 1.0 (Public Launch - September 2025)
 - 🔄 API for third-party integrations
 
-### Version 2.0 (Future)
+### Version 2.0 (Future - December 2025/beyond)
 - 🔮 iOS app (SwiftUI)
 - 🔮 Multi-language support
 - 🔮 Live streaming capabilities
@@ -319,6 +318,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 - 📧 **Email**: support@4track.io
-- 💬 **Discord**: [Join our community](https://discord.gg/4track)
 - 🐛 **Bug Reports**: [GitHub Issues](https://github.com/yourusername/fourtrack-os/issues)
-- 📖 **Documentation**: [docs.4track.io](https://docs.4track.io)
+- 📖 **Documentation**: [docs.4track.io](https://4track.io/docs)
