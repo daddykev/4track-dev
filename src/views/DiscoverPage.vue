@@ -186,7 +186,12 @@ const loadNextPage = () => {
   if (isLoadingNextPage.value || feedOrder.value.length === 0) return
   
   isLoadingNextPage.value = true
-  loadingMore.value = true
+  
+  // Only show "Loading more..." spinner if we already have items displayed
+  // This prevents showing it during initial load
+  if (displayedItems.value.length > 0) {
+    loadingMore.value = true
+  }
   
   setTimeout(() => {
     const start = displayedItems.value.length
