@@ -626,7 +626,16 @@ const formatDuration = (seconds) => {
 }
 
 /* Loading States */
-.loading-container,
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 128px - 200px); /* Navbar (64px) + additional offset (200px) */
+  padding: var(--spacing-xl);
+  gap: var(--spacing-md);
+}
+
 .loading-more {
   display: flex;
   flex-direction: column;
