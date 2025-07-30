@@ -17,7 +17,7 @@
 - **Collaborator Royalty Splits** - Automatically split payments between multiple parties
 - **Flexible Pricing** - Set prices from $1-10 per track
 - **Download Control** - Choose stream-only or allow downloads
-- **Public Link** - Share your medley at `4track.io/yourname`
+- **Public Link** - Share your page at `4track.io/yourname`
 - **Audio Player Visibility** - Toggle public/hidden status
 - **Basic Analytics** - Track plays, hearts, downloads, and revenue
 - **Photo Gallery** - Upload high-resolution photos with automatic thumbnails
@@ -218,7 +218,7 @@ Example usage:
 2. **Apply to Become Artist** - Submit application with artist details
 3. **Get Approved** - Admin reviews and approves application
 4. **Set Up Profile** - Add bio, photos, and PayPal email
-5. **Upload Medley** - Add up to 4 tracks with artwork
+5. **Upload Audio and Artwork** - Add up to 4 tracks with artwork
 6. **Configure Collaborators** - Set up royalty splits for featured artists
 7. **Share & Earn** - Share your link and get paid directly
 
