@@ -24,11 +24,11 @@ onMounted(() => {
         <div class="hero-actions">
           <router-link to="/signup" class="btn btn-primary btn-lg hero-cta">
             <font-awesome-icon icon="fa-solid fa-play" />
-            Start Free
+            Get Started
           </router-link>
           <router-link to="/discover" class="btn btn-secondary btn-lg hero-cta-secondary">
-            <font-awesome-icon icon="fa-solid fa-search" />
-            Explore Music
+            <font-awesome-icon icon="fa-solid fa-lightbulb" />
+            Preview Feed
           </router-link>
         </div>
         <div class="hero-github">
@@ -223,7 +223,7 @@ onMounted(() => {
           
           <div class="footer-bottom">
             <p>&copy; 2025 4track. Released under MIT License.</p>
-            <p class="footer-note">100% of payments go directly to artists</p>
+            <p class="footer-note">Public Beta Launch September 2025</p>
           </div>
         </div>
       </div>

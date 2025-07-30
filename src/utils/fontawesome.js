@@ -50,7 +50,11 @@ import {
   faBolt,
   faRotate,
   faSliders,
-  faKey
+  faKey,
+  faAnglesDown,
+  faArrowDownShortWide,
+  faArrowDownWideShort,
+  faIcons
 } from '@fortawesome/free-solid-svg-icons'
 
 // Import brands
@@ -110,6 +114,10 @@ library.add(
   faRotate,
   faSliders,
   faKey,
+  faAnglesDown,
+  faArrowDownShortWide,
+  faArrowDownWideShort,
+  faIcons,
   // Brand icons
   faGoogle,
   faPaypal,

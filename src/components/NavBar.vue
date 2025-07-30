@@ -198,7 +198,7 @@ onMounted(() => {
             class="navbar-item" 
             @click="closeMobileMenu"
           >
-            <font-awesome-icon :icon="['fas', 'search']" class="navbar-icon" />
+            <font-awesome-icon :icon="['fas', 'lightbulb']" class="navbar-icon" />
             <span>Discover</span>
           </router-link>
           
