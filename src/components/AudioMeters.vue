@@ -17,8 +17,9 @@ const allMetersAtRest = ref(false);
 // Get theme values from our composable
 const { canvasBgColor, meterColors, isDarkTheme } = useTheme();
 
-// Decay rate for when playback stops (dB per second)
-const PAUSE_DECAY_RATE = 60; // 60 dB per second = ~1 second to decay from 0 to -60dB
+// Decay rates for when playback stops (dB per second)
+const PAUSE_DECAY_RATE = 60; // 60 dB per second = ~1 second to decay from 0 to -60dB (main meters)
+const PEAK_PAUSE_DECAY_RATE = 30; // 30 dB per second = ~2 seconds to decay from 0 to -60dB (peak meters)
 
 const channelData = ref({
   left: {
@@ -115,10 +116,11 @@ const applyPeakRelease = (currentPeak, previousPeak, deltaTime) => {
   return Math.max(currentPeak, previousPeak - releaseAmount);
 };
 
-// Apply decay when paused
-const applyPauseDecay = (value, deltaTime) => {
+// Apply decay when paused - with different rates for main vs peak
+const applyPauseDecay = (value, deltaTime, isPeak = false) => {
   if (value === -Infinity) return -Infinity;
-  return value - (PAUSE_DECAY_RATE * deltaTime / 1000);
+  const decayRate = isPeak ? PEAK_PAUSE_DECAY_RATE : PAUSE_DECAY_RATE;
+  return value - (decayRate * deltaTime / 1000);
 };
 
 // Check if all meters are at rest (below -60dB)
@@ -126,8 +128,8 @@ const checkIfAllMetersAtRest = () => {
   const threshold = -60;
   return channelData.value.left.peak.displayed < threshold &&
          channelData.value.left.rms.averaged < threshold &&
-         channelData.value.right.peak.displayed < threshold &&
-         channelData.value.right.rms.averaged < threshold;
+         channelData.value.right.rms.averaged < threshold &&
+         channelData.value.right.peak.displayed < threshold;
 };
 
 const drawMeter = () => {
@@ -156,22 +158,27 @@ const drawMeter = () => {
   if (!props.isPlaying) {
     isPaused.value = true;
     
-    // Apply decay to all meters
-    channelData.value.left.peak.current = applyPauseDecay(channelData.value.left.peak.current, deltaTime);
-    channelData.value.left.peak.held = applyPauseDecay(channelData.value.left.peak.held, deltaTime);
-    channelData.value.left.peak.displayed = applyPauseDecay(channelData.value.left.peak.displayed, deltaTime);
-    channelData.value.left.rms.current = applyPauseDecay(channelData.value.left.rms.current, deltaTime);
-    channelData.value.left.rms.averaged = applyPauseDecay(channelData.value.left.rms.averaged, deltaTime);
-    channelData.value.left.rms.recentMin = applyPauseDecay(channelData.value.left.rms.recentMin, deltaTime);
-    channelData.value.left.rms.recentMax = applyPauseDecay(channelData.value.left.rms.recentMax, deltaTime);
+    // Apply decay to all meters - different rates for peaks vs main meters
+    // Peak meters (current and held) use slower decay
+    channelData.value.left.peak.current = applyPauseDecay(channelData.value.left.peak.current, deltaTime, true);
+    channelData.value.left.peak.held = applyPauseDecay(channelData.value.left.peak.held, deltaTime, true);
+    channelData.value.left.peak.displayed = applyPauseDecay(channelData.value.left.peak.displayed, deltaTime, true);
     
-    channelData.value.right.peak.current = applyPauseDecay(channelData.value.right.peak.current, deltaTime);
-    channelData.value.right.peak.held = applyPauseDecay(channelData.value.right.peak.held, deltaTime);
-    channelData.value.right.peak.displayed = applyPauseDecay(channelData.value.right.peak.displayed, deltaTime);
-    channelData.value.right.rms.current = applyPauseDecay(channelData.value.right.rms.current, deltaTime);
-    channelData.value.right.rms.averaged = applyPauseDecay(channelData.value.right.rms.averaged, deltaTime);
-    channelData.value.right.rms.recentMin = applyPauseDecay(channelData.value.right.rms.recentMin, deltaTime);
-    channelData.value.right.rms.recentMax = applyPauseDecay(channelData.value.right.rms.recentMax, deltaTime);
+    // RMS meters use faster decay
+    channelData.value.left.rms.current = applyPauseDecay(channelData.value.left.rms.current, deltaTime, false);
+    channelData.value.left.rms.averaged = applyPauseDecay(channelData.value.left.rms.averaged, deltaTime, false);
+    channelData.value.left.rms.recentMin = applyPauseDecay(channelData.value.left.rms.recentMin, deltaTime, false);
+    channelData.value.left.rms.recentMax = applyPauseDecay(channelData.value.left.rms.recentMax, deltaTime, false);
+    
+    // Same for right channel
+    channelData.value.right.peak.current = applyPauseDecay(channelData.value.right.peak.current, deltaTime, true);
+    channelData.value.right.peak.held = applyPauseDecay(channelData.value.right.peak.held, deltaTime, true);
+    channelData.value.right.peak.displayed = applyPauseDecay(channelData.value.right.peak.displayed, deltaTime, true);
+    
+    channelData.value.right.rms.current = applyPauseDecay(channelData.value.right.rms.current, deltaTime, false);
+    channelData.value.right.rms.averaged = applyPauseDecay(channelData.value.right.rms.averaged, deltaTime, false);
+    channelData.value.right.rms.recentMin = applyPauseDecay(channelData.value.right.rms.recentMin, deltaTime, false);
+    channelData.value.right.rms.recentMax = applyPauseDecay(channelData.value.right.rms.recentMax, deltaTime, false);
     
     // Check if all meters have decayed to rest
     allMetersAtRest.value = checkIfAllMetersAtRest();

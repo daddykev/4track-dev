@@ -25,7 +25,8 @@ const MAX_DB = 0;
 const SMOOTHING_FACTOR = 0.8;
 const BAR_WIDTH = 4;
 const BAR_SPACING = 1;
-const PAUSE_DECAY_RATE = 60; // Increased to 60 dB per second for faster decay
+const PAUSE_DECAY_RATE = 60; // 60 dB per second for main bars (1 second decay)
+const PEAK_PAUSE_DECAY_RATE = 30; // 30 dB per second for peaks (2 second decay)
 
 // Frequency bands for 1/3 octave analysis
 const FREQUENCY_BANDS = [
@@ -45,10 +46,11 @@ const formatFrequency = (freq) => {
     `${freq} Hz`;
 };
 
-// Apply decay when paused - ensure we reach MIN_DB
-const applyPauseDecay = (value, deltaTime) => {
+// Apply decay when paused - with different rates for main vs peak
+const applyPauseDecay = (value, deltaTime, isPeak = false) => {
   if (value <= MIN_DB) return MIN_DB;
-  const decayed = value - (PAUSE_DECAY_RATE * deltaTime / 1000);
+  const decayRate = isPeak ? PEAK_PAUSE_DECAY_RATE : PAUSE_DECAY_RATE;
+  const decayed = value - (decayRate * deltaTime / 1000);
   return decayed <= MIN_DB ? MIN_DB : decayed;
 };
 
@@ -88,10 +90,12 @@ const drawSpectroscope = () => {
   if (!props.isPlaying) {
     isPaused.value = true;
     
-    // Apply decay to all bands - no smoothing during decay
+    // Apply decay to all bands - different rates for main bars vs peaks
     for (let i = 0; i < NUM_BANDS; i++) {
-      currentLevels.value[i] = applyPauseDecay(currentLevels.value[i], deltaTime);
-      peakLevels.value[i] = applyPauseDecay(peakLevels.value[i], deltaTime);
+      // Main bars use faster decay
+      currentLevels.value[i] = applyPauseDecay(currentLevels.value[i], deltaTime, false);
+      // Peak indicators use slower decay
+      peakLevels.value[i] = applyPauseDecay(peakLevels.value[i], deltaTime, true);
       bandLevels[i] = currentLevels.value[i];
     }
     
