@@ -39,6 +39,9 @@ const hasArtistProfile = computed(() => {
   return !!artistProfile.value
 })
 
+// Check if we're on the discover page
+const isDiscoverPage = computed(() => route.name === 'discover')
+
 // Methods
 const toggleMobileMenu = () => {
   mobileMenuOpen.value = !mobileMenuOpen.value
@@ -178,7 +181,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <nav class="navbar">
+  <nav class="navbar" :class="{ 'navbar-dark': isDiscoverPage }">
     <div class="navbar-container">
       <!-- Logo/Brand -->
       <router-link to="/" class="navbar-brand">
@@ -357,8 +360,80 @@ onMounted(() => {
   top: 0;
   z-index: 100;
   box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
 }
 
+/* Dark theme styles for navbar when on discover page */
+.navbar-dark {
+  background: #0f0f1e;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.navbar-dark .navbar-brand {
+  color: #ffffff;
+}
+
+.navbar-dark .brand-text {
+  background: linear-gradient(135deg, #8b9cff, #a890ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.navbar-dark .brand-cassette-icon {
+  color: #8b9cff;
+}
+
+.navbar-dark .navbar-item {
+  color: #cccccc;
+}
+
+.navbar-dark .navbar-item:hover {
+  color: #ffffff;
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.navbar-dark .navbar-item.router-link-active {
+  color: #8b9cff;
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.navbar-dark .navbar-user-button {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.navbar-dark .navbar-user-button:hover {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.navbar-dark .user-avatar {
+  background: #1a1a2e;
+  color: #999999;
+}
+
+.navbar-dark .dropdown-icon {
+  color: #999999;
+}
+
+.navbar-dark .navbar-toggle {
+  color: #ffffff;
+}
+
+.navbar-dark .navbar-toggle:hover {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+/* Dark theme for mobile menu */
+@media (max-width: 768px) {
+  .navbar-dark .navbar-menu {
+    background: #0f0f1e;
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Rest of your existing styles remain the same */
 .navbar-container {
   width: 100%;
   padding: 0 var(--spacing-lg);

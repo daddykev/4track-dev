@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/firebase'
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore'
@@ -28,11 +28,16 @@ const isLoadingNextPage = ref(false)
 
 // Initialize
 onMounted(async () => {
+  // Force dark theme for discover page
+  document.documentElement.classList.add('force-dark-theme')
+  
   await loadContent()
   setupInfiniteScroll()
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
+  // Remove forced dark theme
+  document.documentElement.classList.remove('force-dark-theme')
   window.removeEventListener('scroll', handleScroll)
 })
 
