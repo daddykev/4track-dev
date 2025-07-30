@@ -34,6 +34,11 @@ const purchasingTrack = ref(null)
 const purchaseError = ref(null)
 const artistPhotoLoading = ref(true)
 
+// Audio delay compensation
+const audioDelay = ref(0.090) // 90ms default, can be tuned
+const delayNode = ref(null)
+const debugMode = ref(false) // Set to true to show delay controls
+
 // Add sessionId for analytics
 const sessionId = ref(null)
 
@@ -113,9 +118,52 @@ const handleImageError = (location, event) => {
   event.target.src = DEFAULT_COVER
 }
 
-// Initialize analyser nodes
+// Calculate visualizer delay for debugging
+const calculateVisualizerDelay = () => {
+  if (!audioContext.value) return 0
+  
+  // Get Web Audio API latencies
+  const baseLatency = audioContext.value.baseLatency || 0
+  const outputLatency = audioContext.value.outputLatency || 0
+  
+  // FFT processing delays (in seconds)
+  const metersFftDelay = 1024 / audioContext.value.sampleRate
+  const rtaFftDelay = 8192 / audioContext.value.sampleRate // Reduced from 16384
+  
+  // Animation frame delay (average, half of frame interval)
+  const metersFrameDelay = 0.015 // 15ms (half of 30ms)
+  const rtaFrameDelay = 0.008 // 8ms (half of 16ms for 60fps)
+  
+  // Smoothing introduces additional delay
+  const metersSmoothing = 0.015 // ~15ms for 0.7 smoothing
+  const rtaSmoothing = 0.025 // ~25ms for 0.85 smoothing
+  
+  // Total delays
+  const totalMetersDelay = baseLatency + outputLatency + metersFftDelay + 
+                          metersFrameDelay + metersSmoothing
+  const totalRtaDelay = baseLatency + outputLatency + rtaFftDelay + 
+                       rtaFrameDelay + rtaSmoothing
+  
+  console.log('Visualizer Delays:', {
+    baseLatency: baseLatency * 1000,
+    outputLatency: outputLatency * 1000,
+    metersFftDelay: metersFftDelay * 1000,
+    rtaFftDelay: rtaFftDelay * 1000,
+    totalMetersDelay: totalMetersDelay * 1000,
+    totalRtaDelay: totalRtaDelay * 1000
+  })
+  
+  // Return the maximum delay
+  return Math.max(totalMetersDelay, totalRtaDelay)
+}
+
+// Initialize analyser nodes with delay compensation
 const initializeAnalysers = () => {
   if (!audioContext.value) return
+
+  // Create delay node for audio compensation
+  delayNode.value = audioContext.value.createDelay(1.0) // max 1 second delay
+  delayNode.value.delayTime.value = audioDelay.value
 
   // Initialize meters analysers
   leftMetersAnalyser.value = audioContext.value.createAnalyser()
@@ -130,15 +178,28 @@ const initializeAnalysers = () => {
   rightMetersAnalyser.value.minDecibels = -45
   rightMetersAnalyser.value.maxDecibels = 6
 
-  // Initialize spectroscope analyser
+  // Initialize spectroscope analyser with reduced FFT size
   spectroscopeAnalyser.value = audioContext.value.createAnalyser()
-  spectroscopeAnalyser.value.fftSize = 16384
+  spectroscopeAnalyser.value.fftSize = 4096 // Reduced from 16384 for lower latency
   spectroscopeAnalyser.value.minDecibels = -90
   spectroscopeAnalyser.value.maxDecibels = 0
-  spectroscopeAnalyser.value.smoothingTimeConstant = 0.85
+  spectroscopeAnalyser.value.smoothingTimeConstant = 0.75
   spectroscopeAnalyser.value.channelCount = 2
   spectroscopeAnalyser.value.channelCountMode = 'explicit'
   spectroscopeAnalyser.value.channelInterpretation = 'discrete'
+  
+  // Log calculated delays in debug mode
+  if (debugMode.value) {
+    calculateVisualizerDelay()
+  }
+}
+
+// Update delay in real-time
+const updateAudioDelay = (newDelay) => {
+  audioDelay.value = newDelay
+  if (delayNode.value) {
+    delayNode.value.delayTime.value = newDelay
+  }
 }
 
 // Analytics helper function - simplified for medley pages
@@ -407,8 +468,9 @@ const loadTrack = async (track) => {
       // Create a channel splitter for stereo analysis
       const splitter = audioContext.value.createChannelSplitter(2)
       
-      // Connect source to splitter
-      mediaElementSource.value.connect(splitter)
+      // Route through delay node first for synchronized visualizations
+      mediaElementSource.value.connect(delayNode.value)
+      delayNode.value.connect(splitter)
       
       // Connect left channel to left meters analyser
       splitter.connect(leftMetersAnalyser.value, 0)
@@ -416,11 +478,11 @@ const loadTrack = async (track) => {
       // Connect right channel to right meters analyser
       splitter.connect(rightMetersAnalyser.value, 1)
       
-      // Connect source directly to spectroscope (for stereo analysis)
-      mediaElementSource.value.connect(spectroscopeAnalyser.value)
+      // Connect to spectroscope (also through delay)
+      delayNode.value.connect(spectroscopeAnalyser.value)
       
-      // Connect to destination for audio output
-      mediaElementSource.value.connect(audioContext.value.destination)
+      // Connect delayed audio to destination
+      delayNode.value.connect(audioContext.value.destination)
     }
     
     // Reset time values
@@ -660,6 +722,11 @@ const loadPurchasedTracks = async () => {
 // Lifecycle
 onMounted(() => {
   loadMedley()
+  
+  // Enable debug mode with URL parameter
+  if (route.query.debug === 'true') {
+    debugMode.value = true
+  }
 })
 
 onUnmounted(() => {
@@ -850,6 +917,23 @@ watch(() => currentUser.value, async (newUser) => {
               <font-awesome-icon :icon="['fas', 'forward']" />
             </button>
           </div>
+
+          <!-- Debug Controls -->
+          <div v-if="debugMode" class="debug-controls">
+            <label>Audio Delay: {{ Math.round(audioDelay * 1000) }}ms</label>
+            <input 
+              type="range" 
+              min="0" 
+              max="200" 
+              step="5"
+              :value="audioDelay * 1000"
+              @input="updateAudioDelay($event.target.value / 1000)"
+            />
+            <button @click="calculateVisualizerDelay" class="btn btn-sm">
+              Calculate Delays
+            </button>
+          </div>
+
         </div>
       </div>
 
@@ -1636,6 +1720,22 @@ watch(() => currentUser.value, async (newUser) => {
   font-size: 0.85rem;
   margin-bottom: var(--spacing-sm);
   letter-spacing: 0.5px;
+}
+
+.debug-controls {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  font-size: 0.875rem;
+}
+
+.debug-controls input[type="range"] {
+  flex: 1;
+  max-width: 200px;
 }
 
 /* Loading & Error States */
