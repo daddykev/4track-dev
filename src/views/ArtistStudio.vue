@@ -980,20 +980,20 @@ onMounted(async () => {
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="error-container">
-        <p class="error-message">{{ error }}</p>
+      <div v-else-if="error" class="text-center p-xl">
+        <p class="error-message mb-lg">{{ error }}</p>
         <router-link to="/discover" class="btn btn-primary">
           Back to Discover
         </router-link>
       </div>
 
       <!-- No Artist Profile Yet -->
-      <div v-else-if="!artist && isOwnStudio" class="no-profile">
-        <div class="empty-state">
-          <font-awesome-icon :icon="['fas', 'microphone-alt']" class="empty-icon" />
-          <h2>Set Up Your Artist Profile</h2>
-          <p>You're registered as an artist, but you haven't created your profile yet.</p>
-          <p>Create your profile to start uploading music and sharing with fans!</p>
+      <div v-else-if="!artist && isOwnStudio" class="flex flex-center" style="min-height: 60vh;">
+        <div class="card text-center" style="max-width: 500px;">
+          <font-awesome-icon :icon="['fas', 'microphone-alt']" class="empty-icon text-primary mb-lg" />
+          <h2 class="mb-md">Set Up Your Artist Profile</h2>
+          <p class="text-secondary mb-md">You're registered as an artist, but you haven't created your profile yet.</p>
+          <p class="text-secondary mb-xl">Create your profile to start uploading music and sharing with fans!</p>
           <router-link to="/artist/create" class="btn btn-primary btn-lg">
             <font-awesome-icon :icon="['fas', 'plus']" />
             Create Artist Profile
@@ -1004,20 +1004,20 @@ onMounted(async () => {
       <!-- Studio Content (when artist profile exists) -->
       <div v-else>
         <!-- Studio Header -->
-        <div class="studio-header">
-          <div class="artist-info">
+        <div class="card flex flex-between mb-xl">
+          <div class="flex gap-lg">
             <img 
               v-if="artist.profileImageUrl" 
               :src="artist.profileImageUrl" 
               :alt="artist.name"
               class="artist-avatar"
             />
-            <div v-else class="artist-avatar-placeholder">
+            <div v-else class="artist-avatar artist-avatar-placeholder flex flex-center">
               <font-awesome-icon :icon="['fas', 'music']" />
             </div>
             <div>
-              <h1>{{ artist.name }}'s Studio</h1>
-              <p class="artist-genre">{{ artist.genre || 'Independent Artist' }}</p>
+              <h1 class="m-0 mb-sm">{{ artist.name }}'s Studio</h1>
+              <p class="text-secondary m-0 mb-sm">{{ artist.genre || 'Independent Artist' }}</p>
               <!-- Add toggle switch here -->
               <label class="toggle-switch mt-sm">
                 <input 
@@ -1031,7 +1031,7 @@ onMounted(async () => {
                 </span>
               </label>
               <!-- Show viewing notice for label/manager/admin -->
-              <p v-if="!isOwnStudio" class="viewing-notice">
+              <p v-if="!isOwnStudio" class="viewing-notice text-primary font-sm m-0 mt-sm">
                 <font-awesome-icon :icon="['fas', 'eye']" />
                 Viewing as {{ getRoleLabel(userData?.userType) }}
               </p>
@@ -1045,44 +1045,44 @@ onMounted(async () => {
         </div>
 
         <!-- Quick Stats -->
-        <div class="stats-grid">
-          <div class="stat-card">
+        <div class="grid grid-4 gap-lg mb-xl stats-responsive">
+          <div class="stat-card card">
             <div class="stat-icon">
               <font-awesome-icon :icon="['fas', 'play']" />
             </div>
             <div class="stat-content">
               <div class="stat-value">{{ stats.totalPlays }}</div>
-              <div class="stat-label">Total Plays</div>
+              <div class="stat-label text-secondary">Total Plays</div>
             </div>
           </div>
           
-          <div class="stat-card">
+          <div class="stat-card card">
             <div class="stat-icon">
               <font-awesome-icon :icon="['fas', 'heart']" />
             </div>
             <div class="stat-content">
               <div class="stat-value">{{ stats.totalHearts }}</div>
-              <div class="stat-label">Hearts</div>
+              <div class="stat-label text-secondary">Hearts</div>
             </div>
           </div>
           
-          <div class="stat-card">
+          <div class="stat-card card">
             <div class="stat-icon">
               <font-awesome-icon :icon="['fas', 'download']" />
             </div>
             <div class="stat-content">
               <div class="stat-value">{{ stats.totalDownloads }}</div>
-              <div class="stat-label">Downloads</div>
+              <div class="stat-label text-secondary">Downloads</div>
             </div>
           </div>
           
-          <div class="stat-card">
+          <div class="stat-card card">
             <div class="stat-icon">
               <font-awesome-icon :icon="['fas', 'dollar-sign']" />
             </div>
             <div class="stat-content">
               <div class="stat-value">${{ stats.totalRevenue.toFixed(2) }}</div>
-              <div class="stat-label">Total Revenue</div>
+              <div class="stat-label text-secondary">Total Revenue</div>
             </div>
           </div>
         </div>
@@ -1097,11 +1097,11 @@ onMounted(async () => {
           </div>
           
           <!-- Track Slots -->
-          <div class="track-slots">
+          <div class="grid grid-4 gap-lg track-slots-responsive">
             <div 
               v-for="(slot, index) in 4" 
               :key="index"
-              class="track-slot"
+              class="track-slot card"
               :class="{ 'filled': tracks[index], 'empty': !tracks[index] }"
             >
               <!-- Filled Slot -->
@@ -1112,26 +1112,26 @@ onMounted(async () => {
                   :alt="tracks[index].title"
                   class="track-artwork"
                 />
-                <div v-else class="artwork-placeholder">
+                <div v-else class="track-artwork artwork-placeholder flex flex-center">
                   <font-awesome-icon :icon="['fas', 'music']" />
                 </div>
-                <div class="track-details">
-                  <h3>{{ tracks[index].title }}</h3>
-                  <p>${{ tracks[index].price.toFixed(2) }}</p>
-                  <div v-if="tracks[index].collaborators && tracks[index].collaborators.length > 1" class="collaborator-count">
+                <div class="track-details p-md">
+                  <h3 class="m-0 mb-xs">{{ tracks[index].title }}</h3>
+                  <p class="text-primary fw-semibold m-0">${{ tracks[index].price.toFixed(2) }}</p>
+                  <div v-if="tracks[index].collaborators && tracks[index].collaborators.length > 1" class="collaborator-count text-secondary font-sm mt-xs">
                     <font-awesome-icon :icon="['fas', 'users']" />
                     {{ tracks[index].collaborators.length }} collaborators
                   </div>
                 </div>
                 <button 
                   @click="editTrack(tracks[index])"
-                  class="btn-edit"
+                  class="btn-icon btn-track-action btn-edit"
                 >
                   <font-awesome-icon :icon="['fas', 'edit']" />
                 </button>
                 <button 
                   @click="deleteTrack(tracks[index])"
-                  class="btn-delete"
+                  class="btn-icon btn-track-action btn-delete"
                 >
                   <font-awesome-icon :icon="['fas', 'trash']" />
                 </button>
@@ -1177,7 +1177,7 @@ onMounted(async () => {
               <div class="photo-actions">
                 <button 
                   @click="openPhotoLab(photo)"
-                  class="btn-action"
+                  class="btn-icon photo-action-btn"
                   title="Edit photo"
                 >
                   <font-awesome-icon :icon="['fas', 'wand-magic-sparkles']" />
@@ -1185,20 +1185,20 @@ onMounted(async () => {
                 <button 
                   v-if="!photo.isPrimary"
                   @click="setPrimaryPhoto(photo)"
-                  class="btn-action"
+                  class="btn-icon photo-action-btn"
                   title="Set as primary"
                 >
                   <font-awesome-icon :icon="['fas', 'star']" />
                 </button>
                 <button 
                   @click="deletePhoto(photo)"
-                  class="btn-action btn-delete"
+                  class="btn-icon photo-action-btn btn-danger"
                   title="Delete photo"
                 >
                   <font-awesome-icon :icon="['fas', 'trash']" />
                 </button>
               </div>
-              <div v-if="photo.isPrimary" class="primary-badge">
+              <div v-if="photo.isPrimary" class="primary-badge badge badge-primary">
                 <font-awesome-icon :icon="['fas', 'star']" />
                 Primary
               </div>
@@ -1233,7 +1233,7 @@ onMounted(async () => {
           </div>
           
           <!-- Upload Progress -->
-          <div v-if="uploadProgress > 0 && uploadProgress < 100" class="upload-progress">
+          <div v-if="uploadProgress > 0 && uploadProgress < 100" class="mt-sm">
             <div class="progress-bar">
               <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
             </div>
@@ -1242,13 +1242,13 @@ onMounted(async () => {
         </div>
 
         <!-- Public Link Section -->
-        <div v-if="artist.customSlug && artist.hasPublicMedley" class="section-card">
-          <h2>
+        <div v-if="artist.customSlug && artist.hasPublicMedley" class="card">
+          <h2 class="flex gap-sm m-0 mb-lg">
             <font-awesome-icon :icon="['fas', 'share']" />
             Share Your Medley
           </h2>
-          <div class="link-display">
-            <code>{{ publicUrl }}</code>
+          <div class="link-display flex gap-md">
+            <code class="link-code">{{ publicUrl }}</code>
             <button @click="copyLink" class="btn btn-secondary">
               <font-awesome-icon :icon="['fas', 'copy']" />
               {{ copied ? 'Copied!' : 'Copy' }}
@@ -1257,23 +1257,23 @@ onMounted(async () => {
         </div>
 
         <!-- Add a notice when medley is hidden -->
-        <div v-else-if="artist.customSlug && !artist.hasPublicMedley" class="section-card">
-          <h2>
+        <div v-else-if="artist.customSlug && !artist.hasPublicMedley" class="card">
+          <h2 class="flex gap-sm m-0 mb-lg">
             <font-awesome-icon :icon="['fas', 'eye-slash']" />
             Medley is Hidden
           </h2>
-          <p class="text-secondary">
+          <p class="text-secondary m-0">
             Your medley is currently hidden from the public. Toggle the switch above to make it discoverable.
           </p>
         </div>
 
         <!-- Getting Started Tips -->
-        <div v-if="!artist.hasPublicMedley" class="tips-card">
-          <h3>
+        <div v-if="!artist.hasPublicMedley" class="tips-card card">
+          <h3 class="flex gap-sm m-0 mb-lg">
             <font-awesome-icon :icon="['fas', 'lightbulb']" />
             Getting Started
           </h3>
-          <ol>
+          <ol class="tips-list">
             <li>Upload your first track to create your medley</li>
             <li>Add up to 4 tracks with custom artwork</li>
             <li>Share your medley link with fans</li>
@@ -1348,8 +1348,8 @@ onMounted(async () => {
 
               <!-- Collaborators Section -->
               <div class="form-section">
-                <div class="section-header-inline">
-                  <h4>
+                <div class="section-header-inline flex flex-between mb-lg">
+                  <h4 class="m-0 flex gap-sm">
                     <font-awesome-icon :icon="['fas', 'users']" />
                     Royalty Splits
                   </h4>
@@ -1392,7 +1392,7 @@ onMounted(async () => {
                       </div>
                       
                       <div class="form-group percentage-input">
-                        <div class="input-group">
+                        <div class="input-group flex">
                           <input
                             :value="collab.percentage"
                             @input="updateCollaboratorSplit(index, $event.target.value)"
@@ -1402,6 +1402,7 @@ onMounted(async () => {
                             max="100"
                             class="form-input"
                             placeholder="0"
+                            style="border-right: none; border-radius: var(--radius-md) 0 0 var(--radius-md);"
                           />
                           <span class="input-addon">%</span>
                         </div>
@@ -1411,14 +1412,14 @@ onMounted(async () => {
                         v-if="!collab.isPrimary"
                         type="button"
                         @click="removeCollaborator(index)"
-                        class="btn-icon btn-danger"
+                        class="btn-icon btn-collab-delete"
                         title="Remove collaborator"
                       >
                         <font-awesome-icon :icon="['fas', 'trash']" />
                       </button>
                     </div>
                     
-                    <p v-if="collab.isPrimary" class="form-hint text-primary">
+                    <p v-if="collab.isPrimary" class="form-hint text-primary flex gap-xs mt-xs">
                       <font-awesome-icon :icon="['fas', 'crown']" />
                       Primary Artist
                     </p>
@@ -1428,14 +1429,15 @@ onMounted(async () => {
                 <button 
                   type="button" 
                   @click="addCollaborator" 
-                  class="btn btn-secondary btn-sm w-full"
+                  class="btn btn-secondary btn-sm" 
+                  style="width: 100%;"
                 >
                   <font-awesome-icon :icon="['fas', 'plus']" />
                   Add Collaborator
                 </button>
                 
                 <!-- Split Total -->
-                <div class="split-total" :class="{ 'invalid': !isSplitValid }">
+                <div class="split-total text-center p-md mt-lg" :class="{ 'invalid': !isSplitValid }">
                   <span>Total Split:</span>
                   <strong>{{ totalSplitPercentage.toFixed(2) }}%</strong>
                   <span v-if="!isSplitValid" class="text-danger ml-sm">
@@ -1474,7 +1476,7 @@ onMounted(async () => {
                 <p class="form-hint">Maximum file size: 20MB. Will be cropped to square and resized to 1000×1000px.</p>
                 
                 <!-- Cover art upload progress -->
-                <div v-if="coverArtUploadProgress > 0 && coverArtUploadProgress < 100" class="upload-progress">
+                <div v-if="coverArtUploadProgress > 0 && coverArtUploadProgress < 100" class="mt-sm">
                   <div class="progress-bar">
                     <div class="progress-fill" :style="{ width: coverArtUploadProgress + '%' }"></div>
                   </div>
@@ -1483,7 +1485,7 @@ onMounted(async () => {
               </div>
 
               <!-- Error Message -->
-              <div v-if="modalError" class="error-message">
+              <div v-if="modalError" class="form-error">
                 {{ modalError }}
               </div>
 
@@ -1493,7 +1495,7 @@ onMounted(async () => {
                   Cancel
                 </button>
                 <button type="submit" class="btn btn-primary" :disabled="saving || !isSplitValid">
-                  <font-awesome-icon v-if="saving" :icon="['fas', 'spinner']" class="fa-spin mr-sm" />
+                  <font-awesome-icon v-if="saving" :icon="['fas', 'spinner']" class="fa-spin" style="margin-right: 0.5rem;" />
                   {{ saving ? 'Saving...' : (editingTrack ? 'Save Changes' : 'Add Track') }}
                 </button>
               </div>
@@ -1544,127 +1546,36 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* Component-specific styles only - leveraging utility classes above */
 .artist-studio {
   min-height: 100vh;
   background: var(--bg-secondary);
 }
 
-/* No Profile State */
-.no-profile {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-}
-
-.empty-state {
-  text-align: center;
-  padding: var(--spacing-2xl);
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  max-width: 500px;
-}
-
-.empty-icon {
-  font-size: 5rem;
-  color: var(--color-primary);
-  margin-bottom: var(--spacing-lg);
-  opacity: 0.8;
-}
-
-.empty-state h2 {
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-md);
-  font-size: 2rem;
-}
-
-.empty-state p {
-  color: var(--text-secondary);
-  margin-bottom: var(--spacing-md);
-  line-height: 1.6;
-}
-
-.empty-state p:last-of-type {
-  margin-bottom: var(--spacing-xl);
-}
-
-/* Studio Header */
-.studio-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--spacing-2xl);
-  background: var(--bg-card);
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-.artist-info {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-}
-
+/* Artist-specific elements */
 .artist-avatar {
   width: 80px;
   height: 80px;
   border-radius: var(--radius-full);
   object-fit: cover;
   box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
 }
 
 .artist-avatar-placeholder {
-  width: 80px;
-  height: 80px;
-  border-radius: var(--radius-full);
   background: var(--bg-tertiary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-size: 2rem;
   color: var(--text-muted);
 }
 
-.artist-info h1 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 2rem;
-}
-
-.artist-genre {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-}
-
 .viewing-notice {
-  margin: var(--spacing-xs) 0 0 0;
-  color: var(--color-primary);
-  font-size: var(--font-sm);
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
 }
 
-.viewing-notice svg {
-  font-size: 0.9rem;
-}
-
-/* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-2xl);
-}
-
+/* Stats */
 .stat-card {
-  background: var(--bg-card);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   gap: var(--spacing-lg);
@@ -1673,7 +1584,6 @@ onMounted(async () => {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
 }
 
 .stat-icon {
@@ -1686,10 +1596,7 @@ onMounted(async () => {
   justify-content: center;
   font-size: 1.5rem;
   color: var(--color-primary);
-}
-
-.stat-content {
-  flex: 1;
+  flex-shrink: 0;
 }
 
 .stat-value {
@@ -1700,33 +1607,28 @@ onMounted(async () => {
 }
 
 .stat-label {
-  color: var(--text-secondary);
   font-size: 0.9rem;
   margin-top: var(--spacing-xs);
 }
 
 /* Track Slots */
-.track-slots {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--spacing-lg);
-}
-
 .track-slot {
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
   min-height: 300px;
-  box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
+  padding: 0;
+}
+
+.track-slot.empty {
+  background: transparent;
+  border: 3px dashed var(--border-primary);
 }
 
 .empty-slot-btn {
   width: 100%;
   height: 100%;
   background: transparent;
-  border: 3px dashed var(--border-primary);
-  border-radius: var(--radius-lg);
+  border: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1735,27 +1637,21 @@ onMounted(async () => {
   cursor: pointer;
   transition: all var(--transition-normal);
   color: var(--text-secondary);
+  font-size: 3rem;
 }
 
 .empty-slot-btn:hover {
-  border-color: var(--color-primary);
   color: var(--color-primary);
   background: var(--bg-hover);
 }
 
-.empty-slot-btn svg {
-  font-size: 3rem;
-}
-
-/* Track Content */
 .track-content {
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-.track-artwork,
-.artwork-placeholder {
+.track-artwork {
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
@@ -1763,53 +1659,27 @@ onMounted(async () => {
 
 .artwork-placeholder {
   background: var(--bg-tertiary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-size: 3rem;
   color: var(--text-muted);
 }
 
 .track-details {
-  padding: var(--spacing-md);
   flex: 1;
 }
 
-.track-details h3 {
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
-}
-
-.track-details p {
-  color: var(--color-primary);
-  font-weight: 600;
-  margin: 0;
-}
-
 .collaborator-count {
-  margin-top: var(--spacing-xs);
-  color: var(--text-secondary);
-  font-size: 0.85rem;
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
 }
 
-.btn-edit,
-.btn-delete {
+.btn-track-action {
   position: absolute;
   top: var(--spacing-sm);
   background: rgba(0, 0, 0, 0.7);
   color: white;
-  border: none;
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all var(--transition-normal);
 }
 
 .btn-edit {
@@ -1818,11 +1688,6 @@ onMounted(async () => {
 
 .btn-delete {
   right: var(--spacing-sm);
-}
-
-.btn-edit:hover,
-.btn-delete:hover {
-  transform: scale(1.1);
 }
 
 .btn-delete:hover {
@@ -1876,26 +1741,18 @@ onMounted(async () => {
   opacity: 1;
 }
 
-.btn-action {
+.photo-action-btn {
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.7);
   color: white;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all var(--transition-normal);
 }
 
-.btn-action:hover {
-  transform: scale(1.1);
+.photo-action-btn:hover {
   background: var(--color-primary);
 }
 
-.btn-action.btn-delete:hover {
+.photo-action-btn.btn-danger:hover {
   background: var(--color-danger);
 }
 
@@ -1903,11 +1760,6 @@ onMounted(async () => {
   position: absolute;
   bottom: var(--spacing-sm);
   left: var(--spacing-sm);
-  background: var(--color-primary);
-  color: white;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-full);
-  font-size: var(--font-sm);
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
@@ -1926,6 +1778,7 @@ onMounted(async () => {
   cursor: pointer;
   transition: all var(--transition-normal);
   color: var(--text-secondary);
+  font-size: 2rem;
 }
 
 .add-photo-btn:hover:not(:disabled) {
@@ -1939,16 +1792,7 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 
-.add-photo-btn svg {
-  font-size: 2rem;
-}
-
-/* Upload Progress */
-.upload-progress {
-  margin-top: var(--spacing-sm);
-}
-
-/* Photo Viewer Modal */
+/* Photo Viewer */
 .photo-viewer {
   position: relative;
   max-width: 90vw;
@@ -1980,32 +1824,8 @@ onMounted(async () => {
   color: var(--text-primary);
 }
 
-/* Section Cards */
-.section-card {
-  background: var(--bg-card);
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  margin-bottom: var(--spacing-xl);
-}
-
-.section-card h2 {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  color: var(--text-primary);
-  margin: 0 0 var(--spacing-lg) 0;
-  font-size: 1.5rem;
-}
-
 /* Link Display */
-.link-display {
-  display: flex;
-  gap: var(--spacing-md);
-  align-items: center;
-}
-
-.link-display code {
+.link-code {
   flex: 1;
   padding: var(--spacing-md);
   background: var(--bg-secondary);
@@ -2018,25 +1838,16 @@ onMounted(async () => {
 .tips-card {
   background: linear-gradient(135deg, var(--color-primary), #764ba2);
   color: white;
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
 }
 
-.tips-card h3 {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  margin: 0 0 var(--spacing-lg) 0;
-}
-
-.tips-card ol {
+.tips-list {
   margin: 0 0 var(--spacing-lg) var(--spacing-lg);
   padding: 0;
 }
 
-.tips-card li {
+.tips-list li {
   margin-bottom: var(--spacing-sm);
+  color: white;
 }
 
 /* Modal Overrides */
@@ -2044,36 +1855,12 @@ onMounted(async () => {
   max-width: 600px;
 }
 
-.modal-footer {
-  display: flex;
-  gap: var(--spacing-md);
-  justify-content: flex-end;
-  margin-top: var(--spacing-xl);
-  padding-top: var(--spacing-lg);
-  border-top: 1px solid var(--border-primary);
-}
-
-/* Collaborators Section */
+/* Form Extensions */
 .form-section {
   margin-top: var(--spacing-xl);
   padding: var(--spacing-lg);
   background: var(--bg-secondary);
   border-radius: var(--radius-md);
-}
-
-.section-header-inline {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-lg);
-}
-
-.section-header-inline h4 {
-  margin: 0;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
 }
 
 .collaborators-list {
@@ -2111,46 +1898,24 @@ onMounted(async () => {
   max-width: 120px;
 }
 
-.input-group {
-  display: flex;
-  align-items: center;
-}
-
-.input-group .form-input {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
 .input-addon {
   padding: var(--spacing-md);
   background: var(--bg-tertiary);
   border: 2px solid var(--border-primary);
   border-left: none;
-  border-top-right-radius: var(--radius-md);
-  border-bottom-right-radius: var(--radius-md);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
   color: var(--text-secondary);
   font-weight: 600;
 }
 
-.btn-icon {
+.btn-collab-delete {
   width: 36px;
   height: 36px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-full);
-  border: none;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-}
-
-.btn-icon.btn-danger {
   background: var(--color-danger);
   color: white;
 }
 
-.btn-icon.btn-danger:hover {
+.btn-collab-delete:hover {
   background: var(--color-danger-hover);
   transform: scale(1.1);
 }
@@ -2160,10 +1925,8 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-md);
   background: var(--bg-card);
   border-radius: var(--radius-md);
-  margin-top: var(--spacing-lg);
   font-size: 1.1rem;
   border: 2px solid var(--border-primary);
   transition: all var(--transition-normal);
@@ -2183,132 +1946,17 @@ onMounted(async () => {
   color: var(--color-danger);
 }
 
-/* Form Elements */
-.form-textarea {
-  width: 100%;
-  padding: var(--spacing-md);
-  border: 2px solid var(--border-primary);
-  border-radius: var(--radius-md);
-  font-size: 1rem;
-  font-family: inherit;
-  resize: vertical;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  transition: border-color var(--transition-normal);
+/* Component-specific utilities */
+.empty-icon {
+  font-size: 5rem;
+  opacity: 0.8;
 }
 
-.form-textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.form-hint {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-top: var(--spacing-xs);
-}
-
-.form-hint.text-primary {
-  color: var(--color-primary);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-xs);
-}
-
-/* Grid Utilities */
-.grid {
-  display: grid;
-}
-
-.grid-2 {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.gap-md {
-  gap: var(--spacing-md);
-}
-
-/* Checkbox Label */
 .checkbox-label {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
   cursor: pointer;
-}
-
-/* Loading */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  gap: var(--spacing-md);
-}
-
-.loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 3px solid var(--border-primary);
-  border-top: 3px solid var(--color-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Error */
-.error-container {
-  text-align: center;
-  padding: var(--spacing-2xl);
-}
-
-.error-message {
-  background: rgba(220, 53, 69, 0.1);
-  color: var(--color-danger);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-/* Progress Bar */
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background-color: var(--border-primary);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: var(--color-primary);
-  transition: width var(--transition-normal);
-}
-
-/* Utilities */
-.mt-sm { margin-top: var(--spacing-sm); }
-.mt-md { margin-top: var(--spacing-md); }
-.mr-sm { margin-right: var(--spacing-sm); }
-.ml-sm { margin-left: var(--spacing-sm); }
-.text-center { text-align: center; }
-.text-muted { color: var(--text-muted); }
-.text-danger { color: var(--color-danger); }
-.text-primary { color: var(--color-primary); }
-.w-full { width: 100%; }
-
-.btn-sm {
-  padding: var(--spacing-xs) var(--spacing-md);
-  font-size: 0.875rem;
-}
-
-.btn-lg {
-  padding: var(--spacing-md) var(--spacing-xl);
-  font-size: 1.1rem;
 }
 
 /* Animations */
@@ -2323,21 +1971,11 @@ onMounted(async () => {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .studio-header {
-    flex-direction: column;
-    gap: var(--spacing-lg);
-    text-align: center;
-  }
-  
-  .artist-info {
-    flex-direction: column;
-  }
-  
-  .stats-grid {
+  .stats-responsive {
     grid-template-columns: 1fr;
   }
   
-  .track-slots {
+  .track-slots-responsive {
     grid-template-columns: 1fr;
   }
   
@@ -2349,12 +1987,8 @@ onMounted(async () => {
     flex-direction: column;
   }
   
-  .link-display code {
+  .link-code {
     word-break: break-all;
-  }
-  
-  .grid-2 {
-    grid-template-columns: 1fr;
   }
   
   .collab-fields {
@@ -2364,29 +1998,12 @@ onMounted(async () => {
   .percentage-input {
     max-width: 100%;
   }
-  
-  .section-header-inline {
-    flex-direction: column;
-    gap: var(--spacing-md);
-    align-items: stretch;
-  }
 }
 
 @media (max-width: 480px) {
-  .page-container {
-    padding: var(--spacing-md);
-  }
-  
-  .studio-header {
-    padding: var(--spacing-lg);
-  }
-  
-  .artist-info h1 {
-    font-size: 1.5rem;
-  }
-  
-  .stat-value {
-    font-size: 1.5rem;
+  .artist-avatar {
+    width: 60px;
+    height: 60px;
   }
   
   .photo-grid {

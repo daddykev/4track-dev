@@ -54,7 +54,8 @@ import {
   faAnglesDown,
   faArrowDownShortWide,
   faArrowDownWideShort,
-  faIcons
+  faIcons,
+  faWandMagicSparkles
 } from '@fortawesome/free-solid-svg-icons'
 
 // Import brands
@@ -118,6 +119,7 @@ library.add(
   faArrowDownShortWide,
   faArrowDownWideShort,
   faIcons,
+  faWandMagicSparkles,
   // Brand icons
   faGoogle,
   faPaypal,
