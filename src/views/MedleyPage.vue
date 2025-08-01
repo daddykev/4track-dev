@@ -1054,9 +1054,7 @@ watch(() => currentUser.value, async (newUser) => {
 
     <!-- Loading State -->
     <div v-else-if="loading" class="loading-container">
-      <div class="loading-spinner">
-        <font-awesome-icon :icon="['fas', 'spinner']" class="fa-spin" />
-      </div>
+      <div class="loading-spinner"></div>
       <p>Loading medley...</p>
     </div>
 
@@ -1831,11 +1829,6 @@ watch(() => currentUser.value, async (newUser) => {
 .loading-container {
   flex-direction: column;
   gap: var(--spacing-md);
-  color: var(--text-inverse);
-}
-
-.loading-spinner {
-  font-size: 2rem;
   color: var(--text-inverse);
 }
 
