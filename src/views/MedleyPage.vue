@@ -111,6 +111,34 @@ const artistThumbnail = computed(() => {
          null
 })
 
+// Computed properties for custom colors
+const customGradientStyle = computed(() => {
+  if (!artist.value?.colorPalette?.selectedGradient) {
+    // Default gradient
+    return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+  }
+  
+  const start = artist.value.colorPalette.selectedGradient.start
+  const end = artist.value.colorPalette.selectedGradient.end
+  return `linear-gradient(135deg, rgb(${start.r}, ${start.g}, ${start.b}) 0%, rgb(${end.r}, ${end.g}, ${end.b}) 100%)`
+})
+
+const textColors = computed(() => {
+  if (!artist.value?.colorPalette?.textColors) {
+    // Default text colors
+    return {
+      primary: 'rgba(255, 255, 255, 1)',
+      secondary: 'rgba(255, 255, 255, 0.9)'
+    }
+  }
+  
+  const colors = artist.value.colorPalette.textColors
+  return {
+    primary: `rgba(${colors.primary.r}, ${colors.primary.g}, ${colors.primary.b}, ${colors.primary.a || 1})`,
+    secondary: `rgba(${colors.secondary.r}, ${colors.secondary.g}, ${colors.secondary.b}, ${colors.secondary.a || 1})`
+  }
+})
+
 // Add image error handler
 const handleImageError = (location, event) => {
   console.error(`Image failed to load at ${location}:`, event.target.src)
@@ -773,8 +801,12 @@ watch(() => currentUser.value, async (newUser) => {
       </div>
     </div>
 
-    <!-- Main Content - Now Playing Centered -->
-    <div v-if="medley" class="main-content-centered">
+    <!-- Main Content - Now Playing Centered with Custom Colors -->
+    <div v-if="medley" class="main-content-centered" :style="{ 
+      '--custom-gradient': customGradientStyle, 
+      '--text-primary-color': textColors.primary, 
+      '--text-secondary-color': textColors.secondary 
+    }">
       <!-- Now Playing - Primary Focus -->
       <div v-if="currentTrack" class="now-playing-primary">
         <div class="now-playing-container">
@@ -1122,9 +1154,9 @@ watch(() => currentUser.value, async (newUser) => {
   padding: 0 var(--spacing-2xl) var(--spacing-2xl);
 }
 
-/* Now Playing Primary */
+/* Now Playing Primary - Updated to use custom gradient */
 .now-playing-primary {
-  background: var(--bg-card);
+  background: var(--custom-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
   backdrop-filter: blur(10px);
   border-radius: var(--radius-xl);
   padding: var(--spacing-2xl);
@@ -1160,8 +1192,9 @@ watch(() => currentUser.value, async (newUser) => {
   min-width: 0;
 }
 
+/* Updated text colors to use custom properties */
 .now-playing-title {
-  color: var(--text-primary);
+  color: var(--text-primary-color, var(--text-primary));
   font-size: 2rem;
   font-weight: 700;
   margin: 0 0 var(--spacing-sm) 0;
@@ -1169,14 +1202,14 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .now-playing-artist {
-  color: var(--text-secondary);
+  color: var(--text-secondary-color, var(--text-secondary));
   font-size: 1.25rem;
   margin: 0 0 var(--spacing-xl) 0;
 }
 
-/* Empty Now Playing */
+/* Empty Now Playing - Updated to use custom gradient */
 .now-playing-empty {
-  background: var(--bg-card);
+  background: var(--custom-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
   backdrop-filter: blur(10px);
   border-radius: var(--radius-xl);
   padding: var(--spacing-2xl);
@@ -1191,12 +1224,17 @@ watch(() => currentUser.value, async (newUser) => {
 
 .empty-player-message {
   text-align: center;
-  color: var(--text-muted);
+  color: var(--text-primary-color, var(--text-muted));
 }
 
 .empty-icon {
   font-size: 3rem;
   margin-bottom: var(--spacing-md);
+  color: var(--text-primary-color, var(--text-muted));
+}
+
+.empty-player-message p {
+  color: var(--text-primary-color, var(--text-muted));
 }
 
 /* Download Section */
@@ -1209,9 +1247,10 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .download-btn {
-  background: var(--color-primary);
-  color: var(--text-inverse);
-  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: var(--text-primary-color, var(--text-inverse));
+  border: 2px solid rgba(255, 255, 255, 0.3);
   padding: var(--spacing-md) var(--spacing-xl);
   border-radius: var(--radius-md);
   font-weight: 600;
@@ -1224,8 +1263,9 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .download-btn:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .download-btn:disabled {
@@ -1237,7 +1277,7 @@ watch(() => currentUser.value, async (newUser) => {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  color: var(--text-muted);
+  color: var(--text-secondary-color, var(--text-muted));
   font-size: 0.9rem;
   margin-top: var(--spacing-md);
 }
@@ -1252,7 +1292,7 @@ watch(() => currentUser.value, async (newUser) => {
   padding: 0;
 }
 
-/* Tape Machine Animation */
+/* Tape Machine Animation - Restored Original Colors */
 .tape-machine-animation {
   width: auto;
   height: 100px;
@@ -1284,7 +1324,7 @@ watch(() => currentUser.value, async (newUser) => {
 .reel {
   width: 98px;
   height: 98px;
-  background-color: #667eea; /* Keep primary color */
+  background-color: #667eea; /* Original primary color */
   border-radius: 50%;
   position: relative;
   overflow: visible;
@@ -1308,7 +1348,7 @@ watch(() => currentUser.value, async (newUser) => {
   position: absolute;
   width: 32px;
   height: 32px;
-  background-color: #667eea; /* Keep primary color */
+  background-color: #667eea; /* Original primary color */
   border-radius: 50%;
   top: 50%;
   left: 50%;
@@ -1407,7 +1447,7 @@ watch(() => currentUser.value, async (newUser) => {
 .progress-bar {
   flex: 1;
   height: 6px;
-  background: var(--bg-tertiary);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 3px;
   cursor: pointer;
   position: relative;
@@ -1415,14 +1455,14 @@ watch(() => currentUser.value, async (newUser) => {
 
 .progress-fill {
   height: 100%;
-  background: var(--color-primary);
+  background: var(--text-primary-color, rgba(255, 255, 255, 0.8));
   border-radius: 3px;
   transition: width 0.1s linear;
 }
 
 .time-label {
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: var(--text-secondary-color, var(--text-secondary));
   min-width: 40px;
 }
 
@@ -1435,12 +1475,13 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .control-btn {
-  background: var(--bg-tertiary);
-  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   width: 48px;
   height: 48px;
   border-radius: var(--radius-full);
-  color: var(--text-primary);
+  color: var(--text-primary-color, var(--text-primary));
   cursor: pointer;
   transition: all var(--transition-normal);
   display: flex;
@@ -1449,8 +1490,9 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .control-btn:hover:not(:disabled) {
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.3);
   transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .control-btn:disabled {
@@ -1461,12 +1503,21 @@ watch(() => currentUser.value, async (newUser) => {
 .play-btn {
   width: 56px;
   height: 56px;
-  background: var(--color-primary);
-  color: var(--text-inverse);
+  background: rgba(255, 255, 255, 0.3);
+  color: var(--text-primary-color, var(--text-inverse));
 }
 
 .play-btn:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Audio Format Info */
+.audio-format-info {
+  text-align: center;
+  color: var(--text-secondary-color, var(--text-muted));
+  font-size: 0.85rem;
+  margin-bottom: var(--spacing-sm);
+  letter-spacing: 0.5px;
 }
 
 /* Track List Section */
@@ -1576,6 +1627,23 @@ watch(() => currentUser.value, async (newUser) => {
 
 .track-duration {
   flex-shrink: 0;
+}
+
+.track-collaborators {
+  margin-top: var(--spacing-xs);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.collab-label {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.collab-names {
+  color: var(--text-secondary);
 }
 
 .empty-tracks {
@@ -1697,40 +1765,21 @@ watch(() => currentUser.value, async (newUser) => {
   color: var(--text-primary);
 }
 
-.track-collaborators {
-  margin-top: var(--spacing-xs);
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  display: flex;
-  gap: var(--spacing-xs);
-}
-
-.collab-label {
-  opacity: 0.7;
-  font-style: italic;
-}
-
-.collab-names {
-  color: var(--text-secondary);
-}
-
-.audio-format-info {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  margin-bottom: var(--spacing-sm);
-  letter-spacing: 0.5px;
-}
-
+/* Debug Controls */
 .debug-controls {
   margin-top: var(--spacing-lg);
   padding: var(--spacing-md);
-  background: var(--bg-tertiary);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
   font-size: 0.875rem;
+  color: var(--text-primary-color, var(--text-primary));
+}
+
+.debug-controls label {
+  color: var(--text-primary-color, var(--text-primary));
 }
 
 .debug-controls input[type="range"] {

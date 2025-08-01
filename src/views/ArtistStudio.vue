@@ -28,6 +28,7 @@ import { extractAudioMetadata } from '@/utils/audioMetadata'
 import { uploadCoverArtWithThumbnail, deleteCoverArt } from '@/utils/fileUpload'
 import PhotoLab from '@/components/PhotoLab.vue'
 import CircularCropEditor from '@/components/CircularCropEditor.vue'
+import ColorThief from 'colorthief'
 
 const router = useRouter()
 const route = useRoute()
@@ -72,6 +73,23 @@ const artworkFileInput = ref(null)
 const photoFileInput = ref(null)
 const coverArtUploadProgress = ref(0)
 
+// States for color customization
+const showColorModal = ref(false)
+const extractingColors = ref(false)
+const colorPalette = ref(null)
+const selectedGradient = ref({
+  start: { r: 102, g: 126, b: 234 }, // Default --color-primary
+  end: { r: 118, g: 75, b: 162 }     // Default #764ba2
+})
+const selectedTextColors = ref({
+  primary: { r: 255, g: 255, b: 255 },
+  secondary: { r: 255, g: 255, b: 255, a: 0.9 }
+})
+const isUsingDefaultColors = ref(true)
+const savingColors = ref(false)
+const isManualTextColor = ref(false)
+const manualTextColorMode = ref('light') // 'light' or 'dark'
+
 // Form state
 const trackForm = ref({
   title: '',
@@ -102,6 +120,354 @@ const totalSplitPercentage = computed(() => {
 const isSplitValid = computed(() => {
   return Math.abs(totalSplitPercentage.value - 100) < 0.01 // Allow for floating point precision
 })
+
+// Computed color properties
+const hasColorPalette = computed(() => {
+  return artist.value?.colorPalette?.extractedColors?.length > 0
+})
+
+const currentGradientStyle = computed(() => {
+  const start = selectedGradient.value.start
+  const end = selectedGradient.value.end
+  return `linear-gradient(135deg, rgb(${start.r}, ${start.g}, ${start.b}) 0%, rgb(${end.r}, ${end.g}, ${end.b}) 100%)`
+})
+
+// Color utility functions
+const rgbToHex = (color) => {
+  const toHex = (n) => {
+    const hex = Math.round(n).toString(16)
+    return hex.length === 1 ? '0' + hex : hex
+  }
+  return `#${toHex(color.r)}${toHex(color.g)}${toHex(color.b)}`
+}
+
+const colorToString = (color) => {
+  if (color.a !== undefined) {
+    return `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`
+  }
+  return `rgb(${color.r}, ${color.g}, ${color.b})`
+}
+
+const hslToRgb = (h, s, l) => {
+  let r, g, b
+  
+  if (s === 0) {
+    r = g = b = l
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1
+      if (t > 1) t -= 1
+      if (t < 1/6) return p + (q - p) * 6 * t
+      if (t < 1/2) return q
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6
+      return p
+    }
+    
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+    const p = 2 * l - q
+    r = hue2rgb(p, q, h + 1/3)
+    g = hue2rgb(p, q, h)
+    b = hue2rgb(p, q, h - 1/3)
+  }
+  
+  return { r: r * 255, g: g * 255, b: b * 255 }
+}
+
+const getHue = (color) => {
+  const r = color.r / 255
+  const g = color.g / 255
+  const b = color.b / 255
+  
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const delta = max - min
+  
+  if (delta === 0) return 0
+  
+  let hue = 0
+  if (max === r) hue = ((g - b) / delta) % 6
+  else if (max === g) hue = (b - r) / delta + 2
+  else hue = (r - g) / delta + 4
+  
+  return hue * 60
+}
+
+const calculateAverageBrightness = (color1, color2) => {
+  const brightness1 = (color1.r * 299 + color1.g * 587 + color1.b * 114) / 1000
+  const brightness2 = (color2.r * 299 + color2.g * 587 + color2.b * 114) / 1000
+  return (brightness1 + brightness2) / 2
+}
+
+const calculateGradientScore = (color1, color2) => {
+  const brightness1 = (color1.r * 299 + color1.g * 587 + color1.b * 114) / 1000
+  const brightness2 = (color2.r * 299 + color2.g * 587 + color2.b * 114) / 1000
+  const contrast = Math.abs(brightness1 - brightness2)
+  
+  const colorDistance = Math.sqrt(
+    Math.pow(color1.r - color2.r, 2) +
+    Math.pow(color1.g - color2.g, 2) +
+    Math.pow(color1.b - color2.b, 2)
+  )
+  
+  const hue1 = getHue(color1)
+  const hue2 = getHue(color2)
+  const hueDistance = Math.min(Math.abs(hue1 - hue2), 360 - Math.abs(hue1 - hue2))
+  
+  const hueScore = hueDistance > 60 && hueDistance < 300 ? hueDistance : hueDistance * 0.5
+  
+  return contrast + (colorDistance * 0.5) + (hueScore * 0.3)
+}
+
+// Load existing colors
+const loadArtistColors = () => {
+  if (artist.value?.colorPalette) {
+    const palette = artist.value.colorPalette
+    
+    if (palette.extractedColors) {
+      colorPalette.value = palette.extractedColors
+    }
+    
+    if (palette.selectedGradient) {
+      selectedGradient.value = palette.selectedGradient
+    }
+    
+    if (palette.textColors) {
+      selectedTextColors.value = palette.textColors
+    }
+    
+    if (palette.isManualTextColor !== undefined) {
+      isManualTextColor.value = palette.isManualTextColor
+    }
+    
+    if (palette.manualTextColorMode) {
+      manualTextColorMode.value = palette.manualTextColorMode
+    }
+    
+    isUsingDefaultColors.value = palette.isDefault !== false
+  }
+}
+
+// Color extraction from image
+const extractColorsFromImage = async (imageUrl) => {
+  extractingColors.value = true
+  
+  try {
+    await tryColorThiefExtraction(imageUrl)
+  } catch (error) {
+    console.error('ColorThief extraction failed:', error)
+    await generateIntelligentColors()
+  } finally {
+    extractingColors.value = false
+  }
+}
+
+const tryColorThiefExtraction = async (imageUrl) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    
+    img.onload = () => {
+      try {
+        const colorThief = new ColorThief()
+        const palette = colorThief.getPalette(img, 8)
+        
+        if (!palette || palette.length === 0) {
+          throw new Error('ColorThief returned empty palette')
+        }
+        
+        colorPalette.value = palette.map(color => ({
+          r: color[0],
+          g: color[1],
+          b: color[2]
+        }))
+        
+        autoSelectGradientColors()
+        resolve()
+        
+      } catch (error) {
+        reject(error)
+      }
+    }
+    
+    img.onerror = () => reject(new Error('Image failed to load'))
+    img.crossOrigin = 'anonymous'
+    img.src = imageUrl
+  })
+}
+
+const generateIntelligentColors = async () => {
+  // Fallback color generation based on artist data
+  const baseHue = Math.abs(simpleHash(artist.value.name + artist.value.id)) % 360
+  const colors = []
+  
+  for (let i = 0; i < 8; i++) {
+    const hue = (baseHue + (i * 45)) % 360
+    const saturation = 50 + (i % 3) * 20
+    const lightness = 40 + (i % 4) * 15
+    
+    const rgb = hslToRgb(hue / 360, saturation / 100, lightness / 100)
+    colors.push({
+      r: Math.round(rgb.r),
+      g: Math.round(rgb.g),
+      b: Math.round(rgb.b)
+    })
+  }
+  
+  colorPalette.value = colors
+  autoSelectGradientColors()
+}
+
+const simpleHash = (str) => {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  return Math.abs(hash)
+}
+
+const findOptimalGradientEnd = (palette, startColor) => {
+  let bestColor = palette[1]
+  let bestScore = 0
+  
+  for (let i = 1; i < palette.length; i++) {
+    const candidate = palette[i]
+    const score = calculateGradientScore(startColor, candidate)
+    
+    if (score > bestScore) {
+      bestScore = score
+      bestColor = candidate
+    }
+  }
+  
+  return bestColor
+}
+
+const autoSelectGradientColors = () => {
+  if (!colorPalette.value || colorPalette.value.length < 2) return
+  
+  const startColor = colorPalette.value[0]
+  const endColor = findOptimalGradientEnd(colorPalette.value, startColor)
+  
+  selectedGradient.value = {
+    start: startColor,
+    end: endColor
+  }
+  
+  if (!isManualTextColor.value) {
+    autoSelectTextColors()
+  }
+  
+  isUsingDefaultColors.value = false
+}
+
+const autoSelectTextColors = () => {
+  const avgBrightness = calculateAverageBrightness(selectedGradient.value.start, selectedGradient.value.end)
+  
+  if (avgBrightness > 140) {
+    selectedTextColors.value = {
+      primary: { r: 28, g: 28, b: 28 },
+      secondary: { r: 28, g: 28, b: 28, a: 0.8 }
+    }
+  } else {
+    selectedTextColors.value = {
+      primary: { r: 255, g: 255, b: 255 },
+      secondary: { r: 255, g: 255, b: 255, a: 0.9 }
+    }
+  }
+}
+
+const toggleManualTextColor = () => {
+  isManualTextColor.value = !isManualTextColor.value
+  
+  if (isManualTextColor.value) {
+    applyManualTextColor()
+  } else {
+    autoSelectTextColors()
+  }
+}
+
+const setManualTextColorMode = (mode) => {
+  manualTextColorMode.value = mode
+  if (isManualTextColor.value) {
+    applyManualTextColor()
+  }
+}
+
+const applyManualTextColor = () => {
+  if (manualTextColorMode.value === 'dark') {
+    selectedTextColors.value = {
+      primary: { r: 28, g: 28, b: 28 },
+      secondary: { r: 28, g: 28, b: 28, a: 0.8 }
+    }
+  } else {
+    selectedTextColors.value = {
+      primary: { r: 255, g: 255, b: 255 },
+      secondary: { r: 255, g: 255, b: 255, a: 0.9 }
+    }
+  }
+}
+
+const selectGradientColor = (color, position) => {
+  selectedGradient.value[position] = { ...color }
+  isUsingDefaultColors.value = false
+  
+  if (!isManualTextColor.value) {
+    autoSelectTextColors()
+  }
+}
+
+const resetToDefaultColors = () => {
+  selectedGradient.value = {
+    start: { r: 102, g: 126, b: 234 },
+    end: { r: 118, g: 75, b: 162 }
+  }
+  selectedTextColors.value = {
+    primary: { r: 255, g: 255, b: 255 },
+    secondary: { r: 255, g: 255, b: 255, a: 0.9 }
+  }
+  isUsingDefaultColors.value = true
+  colorPalette.value = []
+  isManualTextColor.value = false
+  manualTextColorMode.value = 'light'
+}
+
+const saveColorPalette = async () => {
+  savingColors.value = true
+  
+  try {
+    const colorData = {
+      colorPalette: {
+        extractedColors: colorPalette.value || [],
+        selectedGradient: selectedGradient.value,
+        textColors: selectedTextColors.value,
+        isDefault: isUsingDefaultColors.value,
+        isManualTextColor: isManualTextColor.value,
+        manualTextColorMode: manualTextColorMode.value,
+        lastUpdated: new Date()
+      }
+    }
+    
+    await updateDoc(doc(db, 'artistProfiles', artist.value.id), colorData)
+    artist.value.colorPalette = colorData.colorPalette
+    closeColorModal()
+    
+  } catch (error) {
+    console.error('Error saving color palette:', error)
+    alert('Failed to save color palette')
+  } finally {
+    savingColors.value = false
+  }
+}
+
+const openColorModal = () => {
+  showColorModal.value = true
+  loadArtistColors()
+}
+
+const closeColorModal = () => {
+  showColorModal.value = false
+}
 
 const loadArtistData = async () => {
   loading.value = true
@@ -187,6 +553,11 @@ const loadArtistData = async () => {
     
     // Load analytics
     await loadAnalytics()
+    
+    // Load color palette data (NEW)
+    if (artist.value) {
+      loadArtistColors()
+    }
     
   } catch (err) {
     console.error('Error loading artist data:', err)
@@ -1241,6 +1612,61 @@ onMounted(async () => {
           </div>
         </div>
 
+        <!-- Medley Colors Section (NEW) -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title">
+              <font-awesome-icon :icon="['fas', 'palette']" class="section-icon" />
+              Medley Colors
+            </h2>
+            <button 
+              @click="openColorModal" 
+              class="btn btn-primary"
+            >
+              {{ hasColorPalette ? 'Edit Colors' : 'Customize Colors' }}
+            </button>
+          </div>
+          
+          <!-- Current Color Preview -->
+          <div class="current-colors-preview">
+            <div class="gradient-preview-container">
+              <div 
+                class="gradient-preview"
+                :style="{ background: currentGradientStyle }"
+              >
+                <div class="gradient-overlay">
+                  <h3 :style="{ color: colorToString(selectedTextColors.primary) }">
+                    {{ artist.name }}'s Medley
+                  </h3>
+                  <p :style="{ color: colorToString(selectedTextColors.secondary) }">
+                    Preview of your custom colors
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="color-info">
+              <div class="color-status">
+                <span v-if="isUsingDefaultColors" class="badge badge-secondary">Default Colors</span>
+                <span v-else class="badge badge-success">Custom Colors</span>
+              </div>
+              
+              <div class="color-details">
+                <div class="color-detail">
+                  <span class="color-label">Gradient Start:</span>
+                  <div class="color-swatch" :style="{ backgroundColor: colorToString(selectedGradient.start) }"></div>
+                  <span class="color-value">{{ rgbToHex(selectedGradient.start) }}</span>
+                </div>
+                <div class="color-detail">
+                  <span class="color-label">Gradient End:</span>
+                  <div class="color-swatch" :style="{ backgroundColor: colorToString(selectedGradient.end) }"></div>
+                  <span class="color-value">{{ rgbToHex(selectedGradient.end) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Public Link Section -->
         <div v-if="artist.customSlug && artist.hasPublicMedley" class="card">
           <h2 class="flex gap-sm m-0 mb-lg">
@@ -1540,6 +1966,227 @@ onMounted(async () => {
         @close="closeCropEditor"
         @save="handleCroppedPhoto"
       />
+
+      <!-- Color Palette Modal (NEW) -->
+      <div v-if="showColorModal" class="modal-overlay" @click="closeColorModal">
+        <div class="modal color-modal" @click.stop>
+          <div class="modal-header">
+            <h3>Customize Medley Colors</h3>
+            <button @click="closeColorModal" class="close-btn">×</button>
+          </div>
+          
+          <div class="modal-content">
+            <!-- Image Selection for Color Extraction -->
+            <div v-if="!extractingColors && (!colorPalette || colorPalette.length === 0)" class="extract-section text-center mb-xl">
+              <h4 class="text-primary mb-md">Extract Colors From:</h4>
+              
+              <!-- Artist Photos -->
+              <div v-if="photos.length > 0" class="extract-options mb-lg">
+                <p class="text-secondary mb-md">Artist Photos</p>
+                <div class="image-grid">
+                  <div 
+                    v-for="photo in photos.slice(0, 4)" 
+                    :key="photo.id"
+                    class="extractable-image"
+                    @click="extractColorsFromImage(photo.originalUrl)"
+                  >
+                    <img :src="photo.thumbnailUrl" :alt="'Artist photo'" />
+                    <div class="overlay">
+                      <font-awesome-icon :icon="['fas', 'palette']" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Track Artwork -->
+              <div v-if="tracks.length > 0" class="extract-options">
+                <p class="text-secondary mb-md">Track Artwork</p>
+                <div class="image-grid">
+                  <div 
+                    v-for="track in tracks" 
+                    :key="track.id"
+                    class="extractable-image"
+                    @click="extractColorsFromImage(track.artworkUrl)"
+                  >
+                    <img :src="track.artworkUrl" :alt="track.title" />
+                    <div class="overlay">
+                      <font-awesome-icon :icon="['fas', 'palette']" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-if="photos.length === 0 && tracks.length === 0" class="no-images">
+                <p class="text-muted">Upload photos or tracks to extract colors from their images.</p>
+              </div>
+            </div>
+
+            <!-- Extracting State -->
+            <div v-if="extractingColors" class="extracting-state text-center mb-xl">
+              <div class="loading-spinner mb-md"></div>
+              <p class="text-secondary">Extracting colors from image...</p>
+            </div>
+
+            <!-- Color Palette Display -->
+            <div v-if="colorPalette && colorPalette.length > 0" class="palette-section">
+              <h4 class="text-primary mb-md">Extracted Color Palette</h4>
+              <div class="color-palette-grid mb-xl">
+                <div 
+                  v-for="(color, index) in colorPalette" 
+                  :key="index"
+                  class="palette-color"
+                  :style="{ backgroundColor: colorToString(color) }"
+                  @click="selectGradientColor(color, index % 2 === 0 ? 'start' : 'end')"
+                  :title="`Click to use as ${index % 2 === 0 ? 'start' : 'end'} color`"
+                >
+                  <span class="color-hex">{{ rgbToHex(color) }}</span>
+                </div>
+              </div>
+
+              <!-- Gradient Selection -->
+              <div class="gradient-selection mb-xl">
+                <h4 class="text-primary mb-md">Selected Gradient</h4>
+                <div class="gradient-controls">
+                  <div class="gradient-color-selection">
+                    <div class="color-selection-group">
+                      <label class="color-label">Start Color</label>
+                      <div 
+                        class="selected-color" 
+                        :style="{ backgroundColor: colorToString(selectedGradient.start) }"
+                      >
+                        <span class="color-hex">{{ rgbToHex(selectedGradient.start) }}</span>
+                      </div>
+                      <div class="palette-mini">
+                        <div 
+                          v-for="(color, index) in colorPalette" 
+                          :key="`start-${index}`"
+                          class="mini-color"
+                          :style="{ backgroundColor: colorToString(color) }"
+                          @click="selectGradientColor(color, 'start')"
+                          :class="{ active: color.r === selectedGradient.start.r && color.g === selectedGradient.start.g && color.b === selectedGradient.start.b }"
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div class="gradient-arrow">→</div>
+
+                    <div class="color-selection-group">
+                      <label class="color-label">End Color</label>
+                      <div 
+                        class="selected-color" 
+                        :style="{ backgroundColor: colorToString(selectedGradient.end) }"
+                      >
+                        <span class="color-hex">{{ rgbToHex(selectedGradient.end) }}</span>
+                      </div>
+                      <div class="palette-mini">
+                        <div 
+                          v-for="(color, index) in colorPalette" 
+                          :key="`end-${index}`"
+                          class="mini-color"
+                          :style="{ backgroundColor: colorToString(color) }"
+                          @click="selectGradientColor(color, 'end')"
+                          :class="{ active: color.r === selectedGradient.end.r && color.g === selectedGradient.end.g && color.b === selectedGradient.end.b }"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Live Preview -->
+                  <div class="gradient-preview-large">
+                    <div 
+                      class="preview-background"
+                      :style="{ background: currentGradientStyle }"
+                    >
+                      <div class="preview-content">
+                        <h3 :style="{ color: colorToString(selectedTextColors.primary) }">
+                          {{ artist.name }}
+                        </h3>
+                        <p :style="{ color: colorToString(selectedTextColors.secondary) }">
+                          Now Playing: Track Title
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Text Color Control -->
+              <div class="text-color-control mb-xl">
+                <h4 class="text-primary mb-md">Text Color</h4>
+                <div class="text-color-options">
+                  <div class="text-color-toggle">
+                    <label class="toggle-label">
+                      <input 
+                        type="checkbox" 
+                        :checked="isManualTextColor"
+                        @change="toggleManualTextColor"
+                        class="toggle-input"
+                      />
+                      <span class="toggle-switch-color"></span>
+                      <span class="toggle-text">Manual Text Color Control</span>
+                    </label>
+                    <p class="text-secondary text-sm mt-xs">
+                      {{ isManualTextColor ? 'Choose text color manually' : 'Text color selected automatically based on gradient' }}
+                    </p>
+                  </div>
+                  
+                  <div v-if="isManualTextColor" class="manual-color-selector">
+                    <div class="color-option-group">
+                      <button 
+                        @click="setManualTextColorMode('light')"
+                        class="color-option"
+                        :class="{ active: manualTextColorMode === 'light' }"
+                      >
+                        <div class="color-preview light-preview">
+                          <span class="preview-text">Aa</span>
+                        </div>
+                        <span class="option-label">Light Text</span>
+                      </button>
+                      
+                      <button 
+                        @click="setManualTextColorMode('dark')"
+                        class="color-option"
+                        :class="{ active: manualTextColorMode === 'dark' }"
+                      >
+                        <div class="color-preview dark-preview">
+                          <span class="preview-text">Aa</span>
+                        </div>
+                        <span class="option-label">Dark Text</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Actions -->
+              <div class="quick-actions mb-xl">
+                <button @click="autoSelectGradientColors" class="btn btn-secondary">
+                  <font-awesome-icon :icon="['fas', 'arrows-rotate']" />
+                  Auto-Select Best Colors
+                </button>
+                <button @click="resetToDefaultColors" class="btn btn-secondary">
+                  <font-awesome-icon :icon="['fas', 'arrows-rotate']" />
+                  Reset to Default
+                </button>
+              </div>
+            </div>
+
+            <!-- Modal Actions -->
+            <div class="flex gap-md modal-footer">
+              <button @click="closeColorModal" class="btn btn-secondary">
+                Cancel
+              </button>
+              <button 
+                @click="saveColorPalette" 
+                :disabled="savingColors || (!colorPalette && isUsingDefaultColors)"
+                class="btn btn-primary"
+              >
+                {{ savingColors ? 'Saving...' : 'Save Colors' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -1946,6 +2593,465 @@ onMounted(async () => {
   color: var(--color-danger);
 }
 
+/* Color Section Styles (NEW) */
+.current-colors-preview {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: var(--spacing-xl);
+  align-items: center;
+}
+
+.gradient-preview-container {
+  position: relative;
+}
+
+.gradient-preview {
+  width: 100%;
+  height: 200px;
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.gradient-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--spacing-md);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.gradient-overlay h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+}
+
+.gradient-overlay p {
+  font-size: 1rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.color-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.color-status {
+  text-align: center;
+}
+
+.color-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.color-detail {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.color-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border-primary);
+  flex-shrink: 0;
+}
+
+.color-value {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Color Modal Styles (NEW) */
+.color-modal {
+  max-width: 800px;
+  width: 95%;
+  max-height: 90vh;
+}
+
+.extract-section {
+  padding: var(--spacing-xl);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+}
+
+.extract-options {
+  margin-bottom: var(--spacing-lg);
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: var(--spacing-md);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.extractable-image {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  border: 3px solid transparent;
+}
+
+.extractable-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.extractable-image .overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(102, 126, 234, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+  color: white;
+  font-size: 2rem;
+}
+
+.extractable-image:hover {
+  border-color: var(--color-primary);
+  transform: scale(1.05);
+}
+
+.extractable-image:hover .overlay {
+  opacity: 1;
+}
+
+.no-images {
+  padding: var(--spacing-2xl);
+  color: var(--text-muted);
+}
+
+.extracting-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-2xl);
+}
+
+.color-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.palette-color {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  position: relative;
+  border: 3px solid transparent;
+  transition: all var(--transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.palette-color:hover {
+  transform: scale(1.05);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.color-hex {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.palette-color:hover .color-hex {
+  opacity: 1;
+}
+
+.gradient-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.gradient-color-selection {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--spacing-xl);
+  align-items: center;
+}
+
+.color-selection-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.color-selection-group .color-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: none;
+}
+
+.selected-color {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-lg);
+  border: 3px solid var(--border-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: var(--shadow-md);
+}
+
+.selected-color .color-hex {
+  opacity: 1;
+}
+
+.palette-mini {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 200px;
+}
+
+.mini-color {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all var(--transition-normal);
+}
+
+.mini-color:hover,
+.mini-color.active {
+  border-color: var(--color-primary);
+  transform: scale(1.1);
+}
+
+.gradient-arrow {
+  font-size: 2rem;
+  color: var(--color-primary);
+  font-weight: bold;
+}
+
+.gradient-preview-large {
+  width: 100%;
+  height: 250px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.preview-background {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.preview-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+.preview-content h3 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+}
+
+.preview-content p {
+  font-size: 1.2rem;
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Text Color Control Styles (NEW) */
+.text-color-control {
+  background: var(--bg-secondary);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-primary);
+}
+
+.text-color-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-switch-color {
+  position: relative;
+  width: 48px;
+  height: 24px;
+  background-color: var(--bg-tertiary);
+  border-radius: 24px;
+  transition: background-color var(--transition-normal);
+  flex-shrink: 0;
+}
+
+.toggle-switch-color::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform var(--transition-normal);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-input:checked + .toggle-switch-color {
+  background-color: var(--color-primary);
+}
+
+.toggle-input:checked + .toggle-switch-color::after {
+  transform: translateX(24px);
+}
+
+.toggle-text {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.text-sm {
+  font-size: 0.85rem;
+}
+
+.mt-xs {
+  margin-top: var(--spacing-xs);
+}
+
+.manual-color-selector {
+  margin-top: var(--spacing-md);
+}
+
+.color-option-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.color-option {
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.color-option:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.color-option.active {
+  border-color: var(--color-primary);
+  background: var(--bg-hover);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.color-preview {
+  width: 80px;
+  height: 60px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  position: relative;
+  overflow: hidden;
+}
+
+.light-preview {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.dark-preview {
+  background: linear-gradient(135deg, #f0f0f0 0%, #ffffff 100%);
+  color: #1a1a1a;
+}
+
+.preview-text {
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.option-label {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.quick-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+}
+
 /* Component-specific utilities */
 .empty-icon {
   font-size: 5rem;
@@ -1998,6 +3104,36 @@ onMounted(async () => {
   .percentage-input {
     max-width: 100%;
   }
+  
+  /* Color-specific responsive styles (NEW) */
+  .current-colors-preview {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+  
+  .gradient-preview {
+    height: 150px;
+  }
+  
+  .color-palette-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .gradient-color-selection {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+  
+  .gradient-arrow {
+    transform: rotate(90deg);
+  }
+  
+  .color-modal {
+    width: 100vw;
+    height: 100vh;
+    max-height: none;
+    border-radius: 0;
+  }
 }
 
 @media (max-width: 480px) {
@@ -2009,6 +3145,28 @@ onMounted(async () => {
   .photo-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: var(--spacing-md);
+  }
+  
+  /* Color-specific mobile styles (NEW) */
+  .color-palette-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .image-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .quick-actions {
+    flex-direction: column;
+  }
+  
+  .color-option-group {
+    grid-template-columns: 1fr;
+  }
+  
+  .color-preview {
+    width: 100px;
+    height: 50px;
   }
 }
 </style>
