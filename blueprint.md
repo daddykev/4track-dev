@@ -22,6 +22,7 @@
 - **Icons**: FontAwesome 7
 - **Audio**: HTML5 Audio for playback, Web Audio API for visualizations
 - **Image Processing**: Pixels.js for photo filters and effects
+- **Color Extraction**: ColorThief for intelligent palette generation
 
 ### Backend
 - **Database**: Firebase Firestore
@@ -81,7 +82,7 @@ fourtrack-os/
 │   │   ├── AdminArtists.vue    # Admin: Review artist applications
 │   │   ├── AdminUsers.vue      # Admin: User management dashboard
 │   │   ├── ArtistRoster.vue    # Multi-artist management for admin/label/manager users
-│   │   ├── ArtistStudio.vue    # Combined artist dashboard with royalty split management
+│   │   ├── ArtistStudio.vue    # Combined artist dashboard with color customization
 │   │   ├── CreateArtist.vue    # Artist onboarding (requires verified email)
 │   │   ├── DiscoverPage.vue    # Music discover
 │   │   ├── HomePage.vue        # Landing page
@@ -161,6 +162,15 @@ fourtrack-os/
 4. **Circular Crop Editor** - Interactive drag-to-position cropping for primary photos
 5. **Photo Lab** - Creative photo editing with 10 filters
 6. **Original Preservation** - Keep originals for re-cropping or additional processing
+
+### Color Customization Features
+1. **Color Extraction** - Uses ColorThief to extract 8-color palettes from images
+2. **Smart Color Selection** - Automatically selects optimal gradient colors based on contrast and hue
+3. **Manual Text Color Control** - Override automatic text color selection (light/dark)
+4. **Live Preview** - See changes in real-time before saving
+5. **Multiple Sources** - Extract colors from artist photos or track artwork
+6. **Fallback Generation** - Intelligently generates colors if extraction fails
+7. **Persistent Settings** - Color preferences saved to artist profile
 
 ### Collaborator Royalty Management
 1. **Add Collaborators** - Add featured artists, producers, and other contributors
@@ -269,7 +279,22 @@ The platform supports three theme modes for personalized viewing experience:
   createdBy: string (userId),
   createdAt: timestamp,
   platform: '4track',
-  spotifyArtistId: string // Optional Spotify ID
+  spotifyArtistId: string, // Optional Spotify ID
+  colorPalette: { // Custom gradient colors
+    extractedColors: Array<{r: number, g: number, b: number}>,
+    selectedGradient: {
+      start: {r: number, g: number, b: number},
+      end: {r: number, g: number, b: number}
+    },
+    textColors: {
+      primary: {r: number, g: number, b: number, a?: number},
+      secondary: {r: number, g: number, b: number, a?: number}
+    },
+    isDefault: boolean,
+    isManualTextColor: boolean,
+    manualTextColorMode: 'light' | 'dark',
+    lastUpdated: Date
+  }
 }
 ```
 
@@ -292,7 +317,13 @@ The platform supports three theme modes for personalized viewing experience:
   duration: number,
   createdBy: string,
   createdAt: timestamp,
-  updatedAt: timestamp
+  updatedAt: timestamp,
+  collaborators: Array<{
+    name: string,
+    email: string,
+    percentage: number,
+    isPrimary: boolean
+  }>
 }
 ```
 
@@ -359,7 +390,9 @@ The platform supports three theme modes for personalized viewing experience:
   isPrimary: boolean,
   metadata: object, // EXIF data
   uploadedBy: string,
-  uploadedAt: timestamp
+  uploadedAt: timestamp,
+  croppedThumbnailUrl: string, // Optional cropped version
+  croppedThumbnailPath: string // Optional cropped path
 }
 ```
 
@@ -378,6 +411,18 @@ The platform uses Pixels.js (loaded via CDN) for photo filter effects in the Pho
 - **Method**: Uses `filterImgData` for applying filters to ImageData
 - **Filters**: 10 artistic filters available for artist photos
 - **Implementation**: Works with canvas ImageData to avoid DOM manipulation issues
+
+### ColorThief
+The platform uses ColorThief (npm package) for intelligent color extraction:
+- **Library**: https://github.com/lokesh/color-thief
+- **Installation**: `npm install --save colorthief`
+- **Purpose**: Extract dominant colors from images for gradient backgrounds
+- **Method**: Generates 8-color palette from artist photos or track artwork
+- **Implementation**: Used in ArtistStudio.vue for color customization feature
+- **Features**: 
+  - Automatic optimal gradient selection based on contrast and hue calculations
+  - Fallback color generation using artist data if extraction fails
+  - Real-time preview of extracted colors
 
 ### PayPal Multi-Party Payments
 The platform uses PayPal's advanced checkout features for royalty splits:
@@ -414,6 +459,13 @@ Theme management utility for handling light/dark/auto theme switching:
 - `autoBalanceSplits()` - Equally divide 100% among all collaborators
 - `totalSplitPercentage` - Computed sum of all percentages
 - `isSplitValid` - Computed validation that total equals 100%
+
+### Color Extraction Functions (in ArtistStudio.vue)
+- `extractColorsFromImage(imageUrl)` - Extract 8-color palette using ColorThief
+- `autoSelectGradientColors()` - Choose optimal gradient from extracted palette
+- `calculateGradientScore(color1, color2)` - Score color pairs for gradient quality
+- `autoSelectTextColors()` - Determine readable text color based on background
+- `generateIntelligentColors()` - Fallback color generation using artist data hash
 
 ## Authentication Flow
 
@@ -469,7 +521,20 @@ Enhanced artist dashboard combining profile and medley management:
 - **Automatic 1000×1000 WebP conversion at 85% quality**
 - Set primary photo for artist profile image
 - **Photo Lab integration for creative photo editing**
+- **Color extraction from photos/artwork using ColorThief**
+- **Customize medley page gradient background**
+- **Intelligent color selection with manual override options**
 - All-in-one interface at `/studio` route
+
+### Color Customization Workflow
+1. **Navigate to Studio** - Click on "Medley Colors" section
+2. **Choose Image Source** - Select from artist photos or track artwork
+3. **Extract Colors** - ColorThief extracts 8 dominant colors from image
+4. **Auto-Selection** - System automatically selects optimal gradient colors
+5. **Manual Adjustment** - Optionally choose different colors from palette
+6. **Text Color Control** - Auto-selected or manually choose light/dark text
+7. **Live Preview** - See changes in real-time before saving
+8. **Save Colors** - Colors stored in artist profile and applied to medley page
 
 ### Collaborator Royalty Split Workflow
 1. **Add Track** - Click "Add Track" in an empty slot
@@ -493,6 +558,15 @@ Photo editing modal component with artistic filters:
 - **One-click application** and save
 - **Processed photos** saved as new artist photos
 - **Responsive design** works on all devices
+
+### MedleyPage Customization
+Public-facing artist medley page with dynamic theming:
+- **Custom Gradient Backgrounds** - Uses artist's selected gradient colors
+- **Adaptive Text Colors** - Automatically adjusts for readability
+- **CSS Custom Properties** - Dynamic styling without JavaScript overhead
+- **Fallback Defaults** - Uses platform colors if none selected
+- **Consistent Branding** - Artist's color scheme throughout the page
+- **Preserved Animations** - Tape machine keeps original colors for consistency
 
 ### AdminUsers
 Admin dashboard for user management:
@@ -657,19 +731,22 @@ artistAccess: {
 ### Implementation Notes
 
 - User type is stored in the `userType` field in the users collection
-- Email verification required for artist features
+- **Email verification required** for artist features
 - Application approval workflow prevents spam/abuse
 - PayPal email collected only when needed (paid tracks or collaborator splits)
 - Admin routes protected by router navigation guards
 - **Artist Studio provides integrated medley management and analytics**
-- **Single destination at `/studio` for all artist needs**
-- **Photo management integrated into Artist Studio with automatic profile image update**
-- **PhotoLab component provides creative photo editing with Pixels.js filters**
-- **Pixels.js loaded via CDN in index.html**
-- **Filter processing uses ImageData to avoid DOM manipulation issues**
-- **Hierarchical permissions allow labels/managers to access artist studios**
-- **Spotify integration available during artist creation for metadata import**
+- Single destination at `/studio` for all artist needs
+- Photo management integrated into Artist Studio with automatic profile image update
+- PhotoLab component provides creative photo editing with Pixels.js filters
+- Pixels.js loaded via CDN in index.html
+- Filter processing uses ImageData to avoid DOM manipulation issues
+- **ColorThief npm package for intelligent color extraction**
+- Color customization integrated into Artist Studio workflow
+- **MedleyPage dynamically applies artist's custom colors**
+- Hierarchical permissions allow labels/managers to access artist studios
+- Spotify integration available during artist creation for metadata import
 - **Collaborator royalty splits integrated directly into track upload workflow**
-- **PayPal multi-party payments handle automatic distribution**
-- **Split validation prevents saving tracks with invalid percentages**
-- **Primary artist protection ensures main artist is always included**
+- PayPal multi-party payments handle automatic distribution
+- Split validation prevents saving tracks with invalid percentages
+- Primary artist protection ensures main artist is always included
