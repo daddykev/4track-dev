@@ -1098,8 +1098,8 @@ watch(() => currentUser.value, async (newUser) => {
 /* Enhanced Artist Header with transparent background */
 .artist-header-bar {
   background: transparent;
-  padding: var(--spacing-xl) 0;
-  margin-bottom: var(--spacing-2xl);
+  padding: var(--spacing-2xl) 0 var(--spacing-lg) 0; /* Increased top padding */
+  margin-bottom: var(--spacing-lg);
   display: flex;
   align-items: center;
   position: relative;
@@ -1862,8 +1862,8 @@ watch(() => currentUser.value, async (newUser) => {
 /* Responsive Design */
 @media (max-width: 768px) {
   .artist-header-bar {
-    padding: var(--spacing-lg) 0;
-    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl) 0 var(--spacing-md) 0; /* Increased top padding */
+    margin-bottom: var(--spacing-md);
   }
   
   .artist-info-compact {
@@ -1964,8 +1964,8 @@ watch(() => currentUser.value, async (newUser) => {
 
 @media (max-width: 480px) {
   .artist-header-bar {
-    padding: var(--spacing-md) 0;
-    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-lg) 0 var(--spacing-sm) 0; /* Increased top padding */
+    margin-bottom: var(--spacing-sm);
   }
   
   .artist-info-compact {
