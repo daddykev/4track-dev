@@ -780,7 +780,13 @@ watch(() => currentUser.value, async (newUser) => {
 </script>
 
 <template>
-  <div class="medley-page">
+  <div class="medley-page" :style="{ 
+    '--custom-gradient': customGradientStyle, 
+    '--text-primary-color': textColors.primary, 
+    '--text-secondary-color': textColors.secondary,
+    '--content-bg': contentBackgroundColor,
+    '--content-border': contentBorderColor
+  }">
     <!-- Simplified Header Section -->
     <div v-if="artist" class="artist-header-bar">
       <div class="artist-info-compact">
@@ -802,11 +808,7 @@ watch(() => currentUser.value, async (newUser) => {
     </div>
 
     <!-- Main Content - Now Playing Centered with Custom Colors -->
-    <div v-if="medley" class="main-content-centered" :style="{ 
-      '--custom-gradient': customGradientStyle, 
-      '--text-primary-color': textColors.primary, 
-      '--text-secondary-color': textColors.secondary 
-    }">
+    <div v-if="medley" class="main-content-centered">
       <!-- Now Playing - Primary Focus -->
       <div v-if="currentTrack" class="now-playing-primary">
         <div class="now-playing-container">
@@ -1087,20 +1089,23 @@ watch(() => currentUser.value, async (newUser) => {
 </template>
 
 <style scoped>
-/* Base Styles */
+/* Base Styles - Apply gradient to entire page */
 .medley-page {
   min-height: 100vh;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: var(--custom-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+  color: var(--text-primary-color, var(--text-primary));
+  position: relative;
 }
 
-/* Enhanced Artist Header with reduced vertical spacing */
+/* Enhanced Artist Header with transparent background */
 .artist-header-bar {
   background: transparent;
   padding: var(--spacing-xl) 0;
   margin-bottom: var(--spacing-2xl);
   display: flex;
   align-items: center;
+  position: relative;
+  z-index: 10;
 }
 
 .artist-info-compact {
@@ -1123,28 +1128,30 @@ watch(() => currentUser.value, async (newUser) => {
   height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--border-primary);
-  box-shadow: var(--shadow-md);
+  border: 3px solid var(--content-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .artist-avatar-placeholder {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: var(--bg-tertiary);
+  background: var(--content-bg);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
+  color: var(--text-primary-color);
   font-size: 2rem;
+  border: 3px solid var(--content-border);
 }
 
 .artist-name {
   margin: 0;
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--text-primary);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: var(--text-primary-color);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Main Content Centered Layout */
@@ -1152,17 +1159,21 @@ watch(() => currentUser.value, async (newUser) => {
   max-width: 900px;
   margin: 0 auto;
   padding: 0 var(--spacing-2xl) var(--spacing-2xl);
+  position: relative;
+  z-index: 10;
 }
 
-/* Now Playing Primary - Updated to use custom gradient */
+/* Now Playing Primary - Transparent with dynamic background */
 .now-playing-primary {
-  background: var(--custom-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
-  backdrop-filter: blur(10px);
+  background: var(--content-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: var(--radius-xl);
   padding: var(--spacing-2xl);
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--content-border);
   margin-bottom: var(--spacing-2xl);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all var(--transition-normal);
 }
 
 .now-playing-container {
@@ -1182,8 +1193,8 @@ watch(() => currentUser.value, async (newUser) => {
   height: 300px;
   border-radius: var(--radius-lg);
   object-fit: cover;
-  box-shadow: var(--shadow-lg);
-  background-color: var(--bg-tertiary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
 }
 
@@ -1207,37 +1218,40 @@ watch(() => currentUser.value, async (newUser) => {
   margin: 0 0 var(--spacing-xl) 0;
 }
 
-/* Empty Now Playing - Updated to use custom gradient */
+/* Empty Now Playing - Same transparent treatment */
 .now-playing-empty {
-  background: var(--custom-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
-  backdrop-filter: blur(10px);
+  background: var(--content-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: var(--radius-xl);
   padding: var(--spacing-2xl);
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--content-border);
   margin-bottom: var(--spacing-2xl);
   min-height: 400px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .empty-player-message {
   text-align: center;
-  color: var(--text-primary-color, var(--text-muted));
+  color: var(--text-primary-color);
 }
 
 .empty-icon {
   font-size: 3rem;
   margin-bottom: var(--spacing-md);
-  color: var(--text-primary-color, var(--text-muted));
+  color: var(--text-primary-color);
+  opacity: 0.8;
 }
 
 .empty-player-message p {
-  color: var(--text-primary-color, var(--text-muted));
+  color: var(--text-primary-color);
+  opacity: 0.9;
 }
 
-/* Download Section */
+/* Download Section - More visible download button */
 .download-section {
   margin-top: var(--spacing-xl);
   display: flex;
@@ -1249,7 +1263,7 @@ watch(() => currentUser.value, async (newUser) => {
 .download-btn {
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
-  color: var(--text-primary-color, var(--text-inverse));
+  color: var(--text-primary-color);
   border: 2px solid rgba(255, 255, 255, 0.3);
   padding: var(--spacing-md) var(--spacing-xl);
   border-radius: var(--radius-md);
@@ -1277,7 +1291,7 @@ watch(() => currentUser.value, async (newUser) => {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  color: var(--text-secondary-color, var(--text-muted));
+  color: var(--text-secondary-color);
   font-size: 0.9rem;
   margin-top: var(--spacing-md);
 }
@@ -1292,7 +1306,7 @@ watch(() => currentUser.value, async (newUser) => {
   padding: 0;
 }
 
-/* Tape Machine Animation - Restored Original Colors */
+/* Tape Machine Animation - Preserved Original Colors */
 .tape-machine-animation {
   width: auto;
   height: 100px;
@@ -1436,7 +1450,7 @@ watch(() => currentUser.value, async (newUser) => {
   to { transform: rotate(-360deg); }
 }
 
-/* Progress Bar */
+/* Progress Bar - Fixed to show properly */
 .progress-container {
   display: flex;
   align-items: center;
@@ -1451,22 +1465,26 @@ watch(() => currentUser.value, async (newUser) => {
   border-radius: 3px;
   cursor: pointer;
   position: relative;
+  overflow: hidden;
 }
 
 .progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 100%;
-  background: var(--text-primary-color, rgba(255, 255, 255, 0.8));
+  background: var(--text-primary-color);
   border-radius: 3px;
   transition: width 0.1s linear;
 }
 
 .time-label {
   font-size: 0.85rem;
-  color: var(--text-secondary-color, var(--text-secondary));
+  color: var(--text-secondary-color);
   min-width: 40px;
 }
 
-/* Control Buttons */
+/* Control Buttons - Make all buttons have visible backgrounds */
 .control-buttons {
   display: flex;
   justify-content: center;
@@ -1475,22 +1493,23 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .control-btn {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid var(--content-border);
   width: 48px;
   height: 48px;
   border-radius: var(--radius-full);
-  color: var(--text-primary-color, var(--text-primary));
+  color: var(--text-primary-color);
   cursor: pointer;
   transition: all var(--transition-normal);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 1.1rem;
 }
 
 .control-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
   transform: scale(1.1);
   border-color: rgba(255, 255, 255, 0.5);
 }
@@ -1503,35 +1522,37 @@ watch(() => currentUser.value, async (newUser) => {
 .play-btn {
   width: 56px;
   height: 56px;
-  background: rgba(255, 255, 255, 0.3);
-  color: var(--text-primary-color, var(--text-inverse));
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary-color);
+  font-size: 1.3rem;
 }
 
 .play-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Audio Format Info */
 .audio-format-info {
   text-align: center;
-  color: var(--text-secondary-color, var(--text-muted));
+  color: var(--text-secondary-color);
   font-size: 0.85rem;
   margin-bottom: var(--spacing-sm);
   letter-spacing: 0.5px;
 }
 
-/* Track List Section */
+/* Track List Section - Transparent with dynamic background */
 .track-list-section {
-  background: var(--bg-card);
-  backdrop-filter: blur(10px);
+  background: var(--content-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
-  border: 1px solid var(--border-primary);
-  box-shadow: var(--shadow-md);
+  border: 1px solid var(--content-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .section-title {
-  color: var(--text-primary);
+  color: var(--text-primary-color);
   font-size: 1.25rem;
   margin: 0 0 var(--spacing-lg) 0;
   display: flex;
@@ -1550,7 +1571,7 @@ watch(() => currentUser.value, async (newUser) => {
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
-  background: var(--bg-tertiary);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-normal);
@@ -1558,22 +1579,23 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .track-item:hover {
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.1);
   transform: translateX(4px);
+  border-color: var(--content-border);
 }
 
 .track-item.active {
-  background: var(--bg-hover);
-  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .track-item.playing {
-  background: var(--bg-hover);
-  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .playing-icon {
-  color: var(--color-primary);
+  color: var(--text-primary-color);
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -1585,7 +1607,7 @@ watch(() => currentUser.value, async (newUser) => {
 .track-number {
   width: 30px;
   text-align: center;
-  color: var(--text-muted);
+  color: var(--text-secondary-color);
   font-size: 0.9rem;
 }
 
@@ -1594,7 +1616,7 @@ watch(() => currentUser.value, async (newUser) => {
   height: 50px;
   border-radius: var(--radius-sm);
   object-fit: cover;
-  background-color: var(--bg-tertiary);
+  background-color: rgba(0, 0, 0, 0.2);
 }
 
 .track-info {
@@ -1603,7 +1625,7 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .track-name {
-  color: var(--text-primary);
+  color: var(--text-primary-color);
   font-weight: 500;
   margin: 0 0 var(--spacing-xs) 0;
   overflow: hidden;
@@ -1616,13 +1638,16 @@ watch(() => currentUser.value, async (newUser) => {
   align-items: center;
   gap: var(--spacing-md);
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: var(--text-secondary-color);
 }
 
+/* Fix track artist color to match track name */
 .track-artist {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-primary-color);
+  opacity: 0.8;
 }
 
 .track-duration {
@@ -1632,7 +1657,7 @@ watch(() => currentUser.value, async (newUser) => {
 .track-collaborators {
   margin-top: var(--spacing-xs);
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: var(--text-secondary-color);
   display: flex;
   gap: var(--spacing-xs);
 }
@@ -1643,13 +1668,14 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .collab-names {
-  color: var(--text-secondary);
+  color: var(--text-secondary-color);
 }
 
 .empty-tracks {
   text-align: center;
   padding: var(--spacing-2xl);
-  color: var(--text-muted);
+  color: var(--text-primary-color);
+  opacity: 0.8;
 }
 
 /* Track Item Actions */
@@ -1662,7 +1688,7 @@ watch(() => currentUser.value, async (newUser) => {
 .heart-btn-small {
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: var(--text-secondary-color);
   font-size: 1.1rem;
   cursor: pointer;
   padding: var(--spacing-sm);
@@ -1685,21 +1711,23 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 .price-tag {
-  background: rgba(102, 126, 234, 0.2);
-  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary-color);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.9rem;
+  border: 1px solid var(--content-border);
 }
 
 .free-tag {
-  background: rgba(40, 167, 69, 0.2);
-  color: var(--color-success);
+  background: rgba(40, 167, 69, 0.15);
+  color: var(--text-primary-color);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.9rem;
+  border: 1px solid var(--content-border);
 }
 
 /* Error Message */
@@ -1727,6 +1755,7 @@ watch(() => currentUser.value, async (newUser) => {
 
 .modal {
   background: var(--bg-card);
+  backdrop-filter: blur(20px);
   border-radius: var(--radius-xl);
   max-width: 500px;
   width: 90%;
@@ -1775,11 +1804,11 @@ watch(() => currentUser.value, async (newUser) => {
   align-items: center;
   gap: var(--spacing-md);
   font-size: 0.875rem;
-  color: var(--text-primary-color, var(--text-primary));
+  color: var(--text-primary-color);
 }
 
 .debug-controls label {
-  color: var(--text-primary-color, var(--text-primary));
+  color: var(--text-primary-color);
 }
 
 .debug-controls input[type="range"] {
@@ -1795,37 +1824,40 @@ watch(() => currentUser.value, async (newUser) => {
   align-items: center;
   justify-content: center;
   padding: var(--spacing-xl);
+  position: relative;
+  z-index: 10;
 }
 
 .loading-container {
   flex-direction: column;
   gap: var(--spacing-md);
-  color: var(--text-primary);
+  color: var(--text-inverse);
 }
 
 .loading-spinner {
   font-size: 2rem;
-  color: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .error-content {
   text-align: center;
-  background: var(--bg-card);
-  backdrop-filter: blur(10px);
+  background: var(--content-bg);
+  backdrop-filter: blur(20px);
   padding: var(--spacing-2xl);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--content-border);
   max-width: 500px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .error-content h2 {
-  color: var(--text-primary);
+  color: var(--text-primary-color);
   font-size: 1.5rem;
   margin: 0 0 var(--spacing-md) 0;
 }
 
 .error-content p {
-  color: var(--text-secondary);
+  color: var(--text-secondary-color);
   margin: 0 0 var(--spacing-lg) 0;
 }
 
@@ -1862,6 +1894,13 @@ watch(() => currentUser.value, async (newUser) => {
   
   .main-content-centered {
     padding: var(--spacing-lg);
+  }
+  
+  .now-playing-primary,
+  .now-playing-empty,
+  .track-list-section {
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
   }
   
   .cover-and-info {
@@ -1920,11 +1959,13 @@ watch(() => currentUser.value, async (newUser) => {
   .control-btn {
     width: 40px;
     height: 40px;
+    font-size: 1rem;
   }
   
   .play-btn {
     width: 48px;
     height: 48px;
+    font-size: 1.1rem;
   }
 }
 
