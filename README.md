@@ -21,6 +21,7 @@
 - **Audio Player Visibility** - Toggle public/hidden status
 - **Basic Analytics** - Track plays, hearts, downloads, and revenue
 - **Photo Gallery** - Upload high-resolution photos with automatic thumbnails
+- **Custom Color Themes** - Extract color palettes from photos/artwork
 
 ### 🎧 For Listeners
 - **Music Feed** - Discover music through an infinite-scroll feed
@@ -57,6 +58,14 @@
 - **Circular Crop Editor** - Perfect framing for profile photos
 - **Photo Lab Filters** - 10 artistic filters including Vintage, Ocean, Pink Aura
 - **Original Preservation** - Keep originals for re-editing
+
+### 🎨 Color Customization Features
+- **Intelligent Color Extraction** - Extract dominant colors from photos or artwork using ColorThief
+- **Smart Gradient Selection** - Automatically selects optimal gradient colors based on contrast and hue
+- **Manual Override Controls** - Fine-tune gradient colors and text color (light/dark)
+- **Live Preview** - See color changes in real-time before saving
+- **Multiple Image Sources** - Extract colors from artist photos or track artwork
+- **Persistent Theming** - Custom colors applied across the artist's public page
 
 ### 🤝 Collaborator Features
 - **Flexible Splits** - Define exact percentage for each collaborator
@@ -255,6 +264,27 @@ Each collaborator receives their payment directly to their PayPal account instan
 - Splits must total exactly 100%
 - Minimum split is 1%
 
+### 🎨 Color Customization
+
+The platform uses **ColorThief** to provide intelligent color theming:
+
+#### How It Works
+1. **Upload Images** - Add artist photos or track artwork
+2. **Extract Colors** - ColorThief analyzes images to extract dominant colors
+3. **Smart Selection** - Algorithm selects optimal gradient based on contrast and hue
+4. **Live Preview** - See your medley page with custom colors before saving
+5. **Manual Control** - Override automatic selections if desired
+
+#### Color Algorithm
+- Extracts 8 dominant colors from any image
+- Calculates contrast scores between color pairs
+- Considers hue distance for visual appeal
+- Automatically selects readable text colors
+- Falls back to generated colors if extraction fails
+
+#### Implementation
+Colors are applied as CSS custom properties on the medley page, ensuring fast performance and smooth transitions without JavaScript overhead.
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
@@ -312,6 +342,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with [Vue.js](https://vuejs.org/) and [Firebase](https://firebase.google.com/)
 - Photo filters powered by [Pixels.js](https://github.com/silvia-odwyer/pixels.js)
+- Color extraction powered by [ColorThief](https://github.com/lokesh/color-thief)
 - Icons by [FontAwesome](https://fontawesome.com/)
 - Inspired by the independent music community
 
