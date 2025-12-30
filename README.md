@@ -20,6 +20,7 @@
 - **Public Link** - Share your page at `4track.io/yourname`
 - **Audio Player Visibility** - Toggle public/hidden status
 - **Basic Analytics** - Track plays, hearts, downloads, and revenue
+- **Live Shows** - Promote upcoming performances with flyer artwork and ticket links
 - **Photo Gallery** - Upload high-resolution photos with automatic thumbnails
 - **Custom Color Themes** - Extract color palettes from photos/artwork
 
@@ -34,6 +35,7 @@
 - **Heart Tracks** - Save favorites for later purchase
 - **See Collaborators** - View all artists featured on a track
 - **Audio Quality Display** - See format details (bit depth, sample rate, etc.)
+- **Discover Live Shows** - Find upcoming performances in the feed with date, venue, and ticket info
 - **No Account Required** - Stream music without signing up
 
 ### 🏢 For Labels & Managers  
@@ -76,6 +78,16 @@
 - **Multi-Party Payments** - Uses PayPal's purchase units for simultaneous payouts
 - **Partial Payment Handling** - System continues if some payments fail
 - **Transaction Transparency** - All splits recorded in royalty records
+
+### 🎫 Live Show Features
+- **Show Management** - Add, edit, and delete upcoming performances from Artist Studio
+- **Flyer Upload** - Upload event posters up to 10MB
+- **Venue Details** - Include venue name and location (city, state)
+- **Ticket Links** - Link to external ticketing platforms (Eventbrite, etc.)
+- **Feed Integration** - Shows appear in Discover feed alongside tracks and artists
+- **Artist Page Display** - Upcoming shows prominently displayed on public medley pages
+- **Automatic Filtering** - Past shows automatically hidden from public view
+- **Date Badges** - Clear visual date display with month and day
 
 ### 🔐 Authentication & Security
 - **Email Verification** - Required for artist features
@@ -230,6 +242,7 @@ Example usage:
 5. **Upload Audio and Artwork** - Add up to 4 tracks with artwork
 6. **Configure Collaborators** - Set up royalty splits for featured artists
 7. **Share & Earn** - Share your link and get paid directly
+8. **Add Live Shows** - Promote upcoming performances with dates, venues, and ticket links
 
 ## 💰 Revenue Model
 
@@ -318,21 +331,21 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## 🎯 Roadmap
 
-### Version 0.5 (Current)
+### Version 0.1 (Current)
 - ✅ Artist audio players
 - ✅ Direct PayPal integration
 - ✅ Photo gallery with filters
 - ✅ Basic analytics
 - ✅ Email verification
 - ✅ Collaborator royalty splits
+- ✅ Live show promotion and discovery
 
-### Version 1.0 (Public Launch - September 2025)
+### Version 0.2 (Public Launch - January 2026)
 - 🔄 API for third-party integrations
 
-### Version 2.0 (Future - December 2025/beyond)
+### Version 0.3 (Future - June 2026/beyond)
 - 🔮 iOS app (SwiftUI)
 - 🔮 Multi-language support
-- 🔮 Live streaming capabilities
 
 ## 📄 License
 
