@@ -34,6 +34,10 @@ const purchasingTrack = ref(null)
 const purchaseError = ref(null)
 const artistPhotoLoading = ref(true)
 
+// Live Shows state
+const shows = ref([])
+const showAllShows = ref(false)
+
 // Audio delay compensation
 const audioDelay = ref(0.090) // 90ms default, can be tuned
 const delayNode = ref(null)
@@ -131,12 +135,29 @@ const textColors = computed(() => {
       secondary: 'rgba(255, 255, 255, 0.9)'
     }
   }
-  
+
   const colors = artist.value.colorPalette.textColors
   return {
     primary: `rgba(${colors.primary.r}, ${colors.primary.g}, ${colors.primary.b}, ${colors.primary.a || 1})`,
     secondary: `rgba(${colors.secondary.r}, ${colors.secondary.g}, ${colors.secondary.b}, ${colors.secondary.a || 1})`
   }
+})
+
+// Computed properties for shows
+const upcomingShows = computed(() => {
+  return shows.value.filter(show => {
+    const eventDate = show.eventDate?.toDate ? show.eventDate.toDate() : new Date(show.eventDate)
+    return eventDate > new Date()
+  }).sort((a, b) => {
+    const dateA = a.eventDate?.toDate ? a.eventDate.toDate() : new Date(a.eventDate)
+    const dateB = b.eventDate?.toDate ? b.eventDate.toDate() : new Date(b.eventDate)
+    return dateA - dateB
+  })
+})
+
+const displayedShows = computed(() => {
+  if (showAllShows.value) return upcomingShows.value
+  return upcomingShows.value.slice(0, 3)
 })
 
 // Add image error handler
@@ -343,7 +364,10 @@ const loadMedley = async () => {
       }
       return trackData
     })
-    
+
+    // Load upcoming shows
+    await loadShows()
+
     // Update page title
     document.title = `${artist.value.name} - Medley | 4track`
     
@@ -402,6 +426,29 @@ const loadArtistPrimaryPhoto = async () => {
     console.error('Error loading artist primary photo:', error)
   } finally {
     artistPhotoLoading.value = false
+  }
+}
+
+// Load upcoming shows for artist
+const loadShows = async () => {
+  if (!artist.value?.id) return
+
+  try {
+    const now = new Date()
+    const showsQuery = query(
+      collection(db, 'liveShows'),
+      where('artistId', '==', artist.value.id),
+      where('eventDate', '>=', now),
+      orderBy('eventDate', 'asc')
+    )
+
+    const showsSnapshot = await getDocs(showsQuery)
+    shows.value = showsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+  } catch (err) {
+    console.error('Error loading shows:', err)
   }
 }
 
@@ -721,6 +768,33 @@ const formatDuration = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+// Show date formatting helpers
+const formatShowMonth = (date) => {
+  const d = date?.toDate ? date.toDate() : new Date(date)
+  return d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
+}
+
+const formatShowDay = (date) => {
+  const d = date?.toDate ? date.toDate() : new Date(date)
+  return d.getDate()
+}
+
+const formatShowWeekday = (date) => {
+  const d = date?.toDate ? date.toDate() : new Date(date)
+  return d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+}
+
+const formatShowTime = (date) => {
+  const d = date?.toDate ? date.toDate() : new Date(date)
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
+const handleShowClick = (show) => {
+  if (show.ticketUrl) {
+    window.open(show.ticketUrl, '_blank', 'noopener,noreferrer')
+  }
+}
+
 // Load purchased tracks on mount
 const loadPurchasedTracks = async () => {
   // Add guards to ensure both values exist
@@ -803,6 +877,65 @@ watch(() => currentUser.value, async (newUser) => {
             <font-awesome-icon :icon="['fas', 'user']" />
           </div>
           <h2 class="artist-name">{{ artist.name }}</h2>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upcoming Shows Section -->
+    <div v-if="upcomingShows.length > 0" class="shows-section-wrapper">
+      <div class="shows-section">
+        <div class="shows-header">
+          <h3 class="shows-title">
+            <font-awesome-icon :icon="['fas', 'calendar-days']" />
+            Upcoming Shows
+          </h3>
+          <button
+            v-if="upcomingShows.length > 3"
+            @click="showAllShows = !showAllShows"
+            class="see-all-btn"
+          >
+            {{ showAllShows ? 'Show Less' : `See All (${upcomingShows.length})` }}
+          </button>
+        </div>
+
+        <div class="shows-list">
+          <div
+            v-for="show in displayedShows"
+            :key="show.id"
+            class="show-item"
+            :class="{ 'has-tickets': show.ticketUrl }"
+            @click="handleShowClick(show)"
+          >
+            <!-- Date Column -->
+            <div class="show-date-col">
+              <span class="show-month">{{ formatShowMonth(show.eventDate) }}</span>
+              <span class="show-day">{{ formatShowDay(show.eventDate) }}</span>
+              <span class="show-weekday">{{ formatShowWeekday(show.eventDate) }}</span>
+            </div>
+
+            <!-- Details Column -->
+            <div class="show-details-col">
+              <h4 class="show-title">{{ show.title }}</h4>
+              <div class="show-venue">
+                <font-awesome-icon :icon="['fas', 'location-dot']" />
+                {{ show.venue }}
+              </div>
+              <div class="show-location">{{ show.location }}</div>
+              <div class="show-time">
+                <font-awesome-icon :icon="['fas', 'clock']" />
+                {{ formatShowTime(show.eventDate) }}
+              </div>
+            </div>
+
+            <!-- Action Column -->
+            <div class="show-action-col">
+              <button v-if="show.ticketUrl" class="ticket-btn">
+                <font-awesome-icon :icon="['fas', 'ticket']" />
+                Tickets
+              </button>
+              <span v-else class="no-tickets">Info Only</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1859,8 +1992,215 @@ watch(() => currentUser.value, async (newUser) => {
   margin-top: var(--spacing-md);
 }
 
+/* Upcoming Shows Section */
+.shows-section-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-2xl);
+}
+
+.shows-section {
+  background: var(--content-bg, rgba(0, 0, 0, 0.3));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  border: 1px solid var(--content-border, rgba(255, 255, 255, 0.1));
+  margin-bottom: var(--spacing-2xl);
+}
+
+.shows-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.shows-title {
+  color: var(--text-primary-color, white);
+  font-size: 1.25rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.see-all-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--content-border, rgba(255, 255, 255, 0.1));
+  color: var(--text-secondary-color, rgba(255, 255, 255, 0.8));
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.see-all-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary-color, white);
+}
+
+.shows-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.show-item {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  transition: all var(--transition-normal);
+  align-items: center;
+}
+
+.show-item.has-tickets {
+  cursor: pointer;
+}
+
+.show-item.has-tickets:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--content-border, rgba(255, 255, 255, 0.1));
+  transform: translateX(4px);
+}
+
+.show-date-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  min-width: 70px;
+}
+
+.show-month {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary-color, rgba(255, 255, 255, 0.8));
+}
+
+.show-day {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary-color, white);
+}
+
+.show-weekday {
+  font-size: 0.7rem;
+  color: var(--text-secondary-color, rgba(255, 255, 255, 0.7));
+  text-transform: uppercase;
+}
+
+.show-details-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.show-title {
+  color: var(--text-primary-color, white);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.show-venue {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--text-secondary-color, rgba(255, 255, 255, 0.8));
+  font-size: 0.9rem;
+}
+
+.show-location {
+  font-size: 0.85rem;
+  color: var(--text-secondary-color, rgba(255, 255, 255, 0.7));
+}
+
+.show-time {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.85rem;
+  color: var(--text-secondary-color, rgba(255, 255, 255, 0.7));
+}
+
+.show-action-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ticket-btn {
+  background: var(--color-primary, #667eea);
+  border: none;
+  color: white;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.ticket-btn:hover {
+  background: var(--color-primary-hover, #5a6fd6);
+  transform: translateY(-2px);
+}
+
+.no-tickets {
+  font-size: 0.8rem;
+  color: var(--text-secondary-color, rgba(255, 255, 255, 0.5));
+  font-style: italic;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+  .shows-section-wrapper {
+    padding: 0 var(--spacing-lg);
+  }
+
+  .shows-section {
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .show-item {
+    grid-template-columns: 70px 1fr;
+    grid-template-rows: auto auto;
+    gap: var(--spacing-md);
+  }
+
+  .show-action-col {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .ticket-btn {
+    flex: 1;
+    justify-content: center;
+    max-width: none;
+  }
+
   .artist-header-bar {
     padding: var(--spacing-xl) 0 var(--spacing-md) 0; /* Increased top padding */
     margin-bottom: var(--spacing-md);
@@ -1963,11 +2303,34 @@ watch(() => currentUser.value, async (newUser) => {
 }
 
 @media (max-width: 480px) {
+  .shows-section-wrapper {
+    padding: 0 var(--spacing-md);
+  }
+
+  .shows-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .show-date-col {
+    min-width: 60px;
+    padding: var(--spacing-xs);
+  }
+
+  .show-day {
+    font-size: 1.5rem;
+  }
+
+  .show-title {
+    font-size: 1rem;
+  }
+
   .artist-header-bar {
     padding: var(--spacing-lg) 0 var(--spacing-sm) 0; /* Increased top padding */
     margin-bottom: var(--spacing-sm);
   }
-  
+
   .artist-info-compact {
     padding: 0 var(--spacing-md);
   }

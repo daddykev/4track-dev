@@ -1,0 +1,120 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType == 'admin';
+    }
+    
+    // Users collection - user profiles
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Invite codes - public read for validation, admin write
+    match /inviteCodes/{codeId} {
+      allow read: if true; // Public read for signup validation
+      allow write: if isAdmin();
+    }
+
+    // Artist applications - users can read their own, admins can read all
+    match /artistApplications/{applicationId} {
+      // Users can read their own applications, admins can read all
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || isAdmin());
+      
+      // Users can create applications
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // Only admins can update applications (for approval/denial)
+      allow update: if isAdmin();
+      
+      // No one can delete applications
+      allow delete: if false;
+    }
+    
+    // Artist profiles - public read for discovery
+    match /artistProfiles/{artistId} {
+      allow read: if true;
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.createdBy;
+      allow update: if request.auth != null && 
+        (request.auth.uid == resource.data.createdBy || isAdmin());
+      allow delete: if request.auth != null && 
+        (request.auth.uid == resource.data.createdBy || isAdmin());
+    }
+    
+    // Medley tracks - public read for playback
+    match /medleyTracks/{trackId} {
+      allow read: if true;
+
+      // For create and update, check the artistId in the request data
+      allow create, update: if request.auth != null && 
+        (isAdmin() ||
+        (exists(/databases/$(database)/documents/artistProfiles/$(request.resource.data.artistId)) &&
+        get(/databases/$(database)/documents/artistProfiles/$(request.resource.data.artistId)).data.createdBy == request.auth.uid));
+
+      // For delete, check the artistId in the existing document
+      allow delete: if request.auth != null && 
+        (isAdmin() ||
+        (exists(/databases/$(database)/documents/artistProfiles/$(resource.data.artistId)) &&
+        get(/databases/$(database)/documents/artistProfiles/$(resource.data.artistId)).data.createdBy == request.auth.uid));
+    }
+    
+    // User collections - MORE PERMISSIVE for development
+    match /userCollections/{docId} {
+      // Allow anyone to read for counting hearts/analytics
+      allow read: if true;
+      
+      // Users can only create/update/delete their own collection items
+      allow create: if request.auth != null && 
+        (request.auth.uid == request.resource.data.userId ||
+         request.auth.email == request.resource.data.userEmail);
+      allow update, delete: if request.auth != null && 
+        (request.auth.uid == resource.data.userId ||
+         request.auth.email == resource.data.userEmail);
+    }
+
+    // Artist photos metadata
+    match /artistPhotos/{photoId} {
+      allow read: if true;
+      allow create: if request.auth != null &&
+        exists(/databases/$(database)/documents/artistProfiles/$(request.resource.data.artistId)) &&
+        get(/databases/$(database)/documents/artistProfiles/$(request.resource.data.artistId)).data.createdBy == request.auth.uid;
+      allow update, delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/artistProfiles/$(resource.data.artistId)) &&
+        get(/databases/$(database)/documents/artistProfiles/$(resource.data.artistId)).data.createdBy == request.auth.uid;
+    }
+
+    // Live shows - public read for feed and artist pages
+    match /liveShows/{showId} {
+      // Anyone can read shows (for feed and public pages)
+      allow read: if true;
+
+      // Only authenticated users can create shows they own
+      allow create: if request.auth != null
+        && request.resource.data.createdBy == request.auth.uid;
+
+      // Only the creator can update or delete
+      allow update, delete: if request.auth != null
+        && resource.data.createdBy == request.auth.uid;
+    }
+
+    // Analytics - write only for data collection, read for authenticated users
+    match /medleyAnalytics/{analyticsId} {
+      allow read: if request.auth != null;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+    
+    // Payment records - read for authenticated users, write from backend only
+    match /medleyRoyalties/{royaltyId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Backend only for writes
+    }
+  }
+}

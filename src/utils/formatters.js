@@ -250,6 +250,77 @@ export function formatPayPalStatus(status) {
     'COMPLETED': 'Completed',
     'PAYER_ACTION_REQUIRED': 'Action Required'
   }
-  
+
   return statusMap[status] || status
+}
+
+/**
+ * Normalize date from various input types (Firestore Timestamp, string, Date)
+ * @param {Date|string|object} date - Date input
+ * @returns {Date} JavaScript Date object
+ */
+export function normalizeDate(date) {
+  if (!date) return new Date()
+
+  // Firestore Timestamp
+  if (date.toDate && typeof date.toDate === 'function') {
+    return date.toDate()
+  }
+
+  // Already a Date
+  if (date instanceof Date) {
+    return date
+  }
+
+  // String or number
+  return new Date(date)
+}
+
+/**
+ * Format show date parts for display
+ * @param {Date|string|object} date - Date to format (supports Firestore Timestamp)
+ * @returns {object} Object with month, day, weekday, year
+ */
+export function formatShowDateParts(date) {
+  const d = normalizeDate(date)
+  return {
+    month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+    day: d.getDate(),
+    weekday: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+    year: d.getFullYear()
+  }
+}
+
+/**
+ * Format show time for display
+ * @param {Date|string|object} date - Date/time to format
+ * @returns {string} Formatted time (e.g., "8:00 PM")
+ */
+export function formatShowTime(date) {
+  const d = normalizeDate(date)
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
+/**
+ * Check if a show date is in the future
+ * @param {Date|string|object} date - Date to check
+ * @returns {boolean} True if date is in the future
+ */
+export function isShowUpcoming(date) {
+  const d = normalizeDate(date)
+  return d > new Date()
+}
+
+/**
+ * Format show date for feed/list display
+ * @param {Date|string|object} date - Date to format
+ * @returns {string} Formatted date (e.g., "Mon, Jan 15")
+ */
+export function formatShowDate(date) {
+  const d = normalizeDate(date)
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  })
 }

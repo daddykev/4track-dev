@@ -402,24 +402,86 @@ export function validateCollectionName(name) {
     isValid: false,
     error: null
   }
-  
+
   if (!name || !name.trim()) {
     result.error = 'Collection name is required'
     return result
   }
-  
+
   const trimmedName = name.trim()
-  
+
   if (trimmedName.length < 2) {
     result.error = 'Collection name must be at least 2 characters'
     return result
   }
-  
+
   if (trimmedName.length > 50) {
     result.error = 'Collection name must be less than 50 characters'
     return result
   }
-  
+
   result.isValid = true
   return result
+}
+
+/**
+ * Validate live show metadata
+ * @param {object} show - Show data to validate
+ * @returns {object} Validation result with errors array
+ */
+export function validateShowMetadata(show) {
+  const errors = []
+
+  // Title (required)
+  if (!show.title || !show.title.trim()) {
+    errors.push('Event title is required')
+  } else if (show.title.length > 100) {
+    errors.push('Event title must be less than 100 characters')
+  }
+
+  // Description (optional, max length)
+  if (show.description && show.description.length > 2000) {
+    errors.push('Description must be less than 2000 characters')
+  }
+
+  // Event date (required)
+  if (!show.eventDate) {
+    errors.push('Event date is required')
+  } else {
+    const eventDate = new Date(show.eventDate)
+    if (isNaN(eventDate.getTime())) {
+      errors.push('Please enter a valid date')
+    }
+  }
+
+  // Event time (required if provided separately)
+  if (show.eventTime !== undefined && !show.eventTime) {
+    errors.push('Event time is required')
+  }
+
+  // Venue (required)
+  if (!show.venue || !show.venue.trim()) {
+    errors.push('Venue is required')
+  } else if (show.venue.length > 100) {
+    errors.push('Venue name must be less than 100 characters')
+  }
+
+  // Location (required)
+  if (!show.location || !show.location.trim()) {
+    errors.push('Location is required')
+  } else if (show.location.length > 100) {
+    errors.push('Location must be less than 100 characters')
+  }
+
+  // Ticket URL (optional but must be valid if provided)
+  if (show.ticketUrl && show.ticketUrl.trim()) {
+    if (!isValidUrl(show.ticketUrl)) {
+      errors.push('Please enter a valid ticket URL')
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  }
 }

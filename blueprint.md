@@ -133,6 +133,7 @@ fourtrack-os/
 9. **Photo Gallery** - Upload artist photos with automatic thumbnail generation
 10. **Photo Lab** - Apply artistic filters to photos using 10 different effects
 11. **Collaborator Royalty Splits** - Automatically split payments between multiple artists
+12. **Live Shows** - Add upcoming live performances with flyer artwork, venue details, and ticket links
 
 ### For Fans
 1. **Discover Music** - Browse artists by genre
@@ -141,6 +142,7 @@ fourtrack-os/
 4. **Download Library** - Access purchased tracks anytime
 5. **Heart Tracks** - Save favorites for later purchase
 6. **See Collaborators** - View all artists featured on a track
+7. **Discover Shows** - Find upcoming live performances in the discover feed
 
 ### For Labels & Managers
 1. **Artist Roster** - Centralized multi-artist management
@@ -162,6 +164,14 @@ fourtrack-os/
 4. **Circular Crop Editor** - Interactive drag-to-position cropping for primary photos
 5. **Photo Lab** - Creative photo editing with 10 filters
 6. **Original Preservation** - Keep originals for re-cropping or additional processing
+
+### Live Show Features
+1. **Show Management** - Artists add/edit shows in Artist Studio
+2. **Flyer Upload** - Upload event posters up to 10MB
+3. **Ticket Links** - External links to ticketing platforms
+4. **Feed Integration** - Shows appear in Discover feed with 3:1:1 pattern
+5. **Artist Page Display** - Upcoming shows shown on public medley page
+6. **Automatic Filtering** - Past shows hidden automatically based on event date
 
 ### Color Customization Features
 1. **Color Extraction** - Uses ColorThief to extract 8-color palettes from images
@@ -280,6 +290,7 @@ The platform supports three theme modes for personalized viewing experience:
   createdAt: timestamp,
   platform: '4track',
   spotifyArtistId: string, // Optional Spotify ID
+  hasUpcomingShows: boolean, // True if artist has future shows
   colorPalette: { // Custom gradient colors
     extractedColors: Array<{r: number, g: number, b: number}>,
     selectedGradient: {
@@ -396,12 +407,34 @@ The platform supports three theme modes for personalized viewing experience:
 }
 ```
 
+#### liveShows
+```
+{
+  artistId: string,
+  artistName: string,           // Denormalized for feed display
+  artistSlug: string,           // For navigation to artist page
+  createdBy: string,            // userId who created
+  title: string,                // Event name
+  description: string,          // Optional event description
+  eventDate: timestamp,         // Date and time of event
+  venue: string,                // Venue name
+  location: string,             // City, State format
+  ticketUrl: string | null,     // External ticket link
+  flyerUrl: string | null,      // Flyer image URL
+  flyerPath: string | null,     // Storage path for deletion
+  isPublic: boolean,            // Visibility in discover feed
+  createdAt: timestamp,
+  updatedAt: timestamp
+}
+```
+
 ## Storage Paths
 
 - **Medley Audio**: `/{userId}/medley/{artistId}/audio/{fileName}` (up to 200MB)
 - **Medley Artwork**: `/{userId}/medley/{artistId}/artwork/{fileName}` (up to 20MB)
 - **Artist Photos**: `/{userId}/artist-photos/{artistId}/original_{fileName}` (up to 20MB)
 - **Photo Thumbnails**: `/{userId}/artist-photos/{artistId}/thumbnails/{fileName}.webp` (1000px, 85% quality)
+- **Live Show Flyers**: `/{userId}/live-shows/{artistId}/flyers/{fileName}` (up to 10MB)
 
 ## Third-Party Integrations
 

@@ -90,6 +90,26 @@ const savingColors = ref(false)
 const isManualTextColor = ref(false)
 const manualTextColorMode = ref('light') // 'light' or 'dark'
 
+// Live Shows state
+const shows = ref([])
+const showShowModal = ref(false)
+const editingShow = ref(null)
+const savingShow = ref(false)
+const showModalError = ref('')
+const flyerFileInput = ref(null)
+
+// Live Show form state
+const showForm = ref({
+  title: '',
+  description: '',
+  eventDate: '',
+  eventTime: '20:00',
+  venue: '',
+  location: '',
+  ticketUrl: '',
+  flyerFile: null
+})
+
 // Form state
 const trackForm = ref({
   title: '',
@@ -119,6 +139,35 @@ const totalSplitPercentage = computed(() => {
 
 const isSplitValid = computed(() => {
   return Math.abs(totalSplitPercentage.value - 100) < 0.01 // Allow for floating point precision
+})
+
+// Computed show properties
+const upcomingShows = computed(() => {
+  const now = new Date()
+  return shows.value
+    .filter(show => {
+      const eventDate = show.eventDate?.toDate ? show.eventDate.toDate() : new Date(show.eventDate)
+      return eventDate > now
+    })
+    .sort((a, b) => {
+      const dateA = a.eventDate?.toDate ? a.eventDate.toDate() : new Date(a.eventDate)
+      const dateB = b.eventDate?.toDate ? b.eventDate.toDate() : new Date(b.eventDate)
+      return dateA - dateB
+    })
+})
+
+const pastShows = computed(() => {
+  const now = new Date()
+  return shows.value
+    .filter(show => {
+      const eventDate = show.eventDate?.toDate ? show.eventDate.toDate() : new Date(show.eventDate)
+      return eventDate <= now
+    })
+    .sort((a, b) => {
+      const dateA = a.eventDate?.toDate ? a.eventDate.toDate() : new Date(a.eventDate)
+      const dateB = b.eventDate?.toDate ? b.eventDate.toDate() : new Date(b.eventDate)
+      return dateB - dateA // Most recent first
+    })
 })
 
 // Computed color properties
@@ -550,7 +599,10 @@ const loadArtistData = async () => {
     
     // Load photos
     await loadPhotos()
-    
+
+    // Load shows
+    await loadShows()
+
     // Load analytics
     await loadAnalytics()
     
@@ -1316,6 +1368,236 @@ const handleProcessedPhoto = async (processedImageData) => {
   }
 }
 
+// Live Shows Management Functions
+const loadShows = async () => {
+  if (!artist.value) return
+
+  try {
+    const showsQuery = query(
+      collection(db, 'liveShows'),
+      where('artistId', '==', artist.value.id),
+      orderBy('eventDate', 'asc')
+    )
+
+    const showsSnapshot = await getDocs(showsQuery)
+    shows.value = showsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+  } catch (err) {
+    console.error('Error loading shows:', err)
+  }
+}
+
+const addShow = () => {
+  showForm.value = {
+    title: '',
+    description: '',
+    eventDate: '',
+    eventTime: '20:00',
+    venue: '',
+    location: '',
+    ticketUrl: '',
+    flyerFile: null
+  }
+  editingShow.value = null
+  showShowModal.value = true
+}
+
+const editShow = (show) => {
+  const eventDate = show.eventDate?.toDate ? show.eventDate.toDate() : new Date(show.eventDate)
+
+  showForm.value = {
+    title: show.title,
+    description: show.description || '',
+    eventDate: eventDate.toISOString().split('T')[0],
+    eventTime: eventDate.toTimeString().slice(0, 5),
+    venue: show.venue,
+    location: show.location || '',
+    ticketUrl: show.ticketUrl || '',
+    flyerFile: null
+  }
+  editingShow.value = show
+  showShowModal.value = true
+}
+
+const saveShow = async () => {
+  // Validation
+  if (!showForm.value.title.trim()) {
+    showModalError.value = 'Event title is required'
+    return
+  }
+  if (showForm.value.title.length > 100) {
+    showModalError.value = 'Event title must be less than 100 characters'
+    return
+  }
+  if (!showForm.value.eventDate) {
+    showModalError.value = 'Event date is required'
+    return
+  }
+  if (!showForm.value.venue.trim()) {
+    showModalError.value = 'Venue is required'
+    return
+  }
+  if (!showForm.value.location.trim()) {
+    showModalError.value = 'Location is required'
+    return
+  }
+  if (showForm.value.ticketUrl && !isValidUrl(showForm.value.ticketUrl)) {
+    showModalError.value = 'Please enter a valid ticket URL'
+    return
+  }
+
+  savingShow.value = true
+  showModalError.value = ''
+
+  try {
+    const user = auth.currentUser
+
+    // Combine date and time into timestamp
+    const eventDateTime = new Date(`${showForm.value.eventDate}T${showForm.value.eventTime}`)
+
+    const showData = {
+      title: showForm.value.title.trim(),
+      description: showForm.value.description.trim(),
+      eventDate: eventDateTime,
+      venue: showForm.value.venue.trim(),
+      location: showForm.value.location.trim(),
+      ticketUrl: showForm.value.ticketUrl.trim(),
+      artistId: artist.value.id,
+      artistName: artist.value.name,
+      updatedAt: serverTimestamp()
+    }
+
+    // Upload flyer if provided
+    if (showForm.value.flyerFile) {
+      const flyerPath = `${user.uid}/live-shows/${artist.value.id}/flyers/${Date.now()}_${showForm.value.flyerFile.name}`
+      showData.flyerUrl = await uploadFile(showForm.value.flyerFile, flyerPath)
+      showData.flyerPath = flyerPath
+    }
+
+    if (editingShow.value) {
+      await updateDoc(doc(db, 'liveShows', editingShow.value.id), showData)
+    } else {
+      showData.createdAt = serverTimestamp()
+      showData.createdBy = user.uid
+      await addDoc(collection(db, 'liveShows'), showData)
+    }
+
+    // Update artist profile hasUpcomingShows flag
+    await updateArtistShowFlags()
+
+    await loadShows()
+    closeShowModal()
+  } catch (err) {
+    console.error('Error saving show:', err)
+    showModalError.value = 'Failed to save show. Please try again.'
+  } finally {
+    savingShow.value = false
+  }
+}
+
+const deleteShow = async (show) => {
+  if (!confirm(`Delete "${show.title}"?`)) return
+
+  try {
+    await firestoreDeleteDoc(doc(db, 'liveShows', show.id))
+
+    // Delete flyer if exists
+    if (show.flyerPath) {
+      try {
+        await deleteObject(storageRef(storage, show.flyerPath))
+      } catch (err) {
+        console.warn('Could not delete show flyer:', err)
+      }
+    }
+
+    await updateArtistShowFlags()
+    await loadShows()
+  } catch (err) {
+    console.error('Error deleting show:', err)
+    alert('Failed to delete show')
+  }
+}
+
+const closeShowModal = () => {
+  showShowModal.value = false
+  editingShow.value = null
+  showModalError.value = ''
+  showForm.value = {
+    title: '',
+    description: '',
+    eventDate: '',
+    eventTime: '20:00',
+    venue: '',
+    location: '',
+    ticketUrl: '',
+    flyerFile: null
+  }
+  if (flyerFileInput.value) flyerFileInput.value.value = ''
+}
+
+const handleFlyerFileSelect = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const validation = validateImageFile(file, { maxSize: 10 * 1024 * 1024 })
+  if (!validation.isValid) {
+    showModalError.value = validation.error
+    event.target.value = ''
+    return
+  }
+
+  showForm.value.flyerFile = file
+  showModalError.value = ''
+}
+
+const updateArtistShowFlags = async () => {
+  const hasUpcoming = upcomingShows.value.length > 0
+
+  await updateDoc(doc(db, 'artistProfiles', artist.value.id), {
+    hasUpcomingShows: hasUpcoming
+  })
+
+  artist.value.hasUpcomingShows = hasUpcoming
+}
+
+// Helper function for URL validation
+const isValidUrl = (url) => {
+  try {
+    new URL(url)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Show date formatting helpers
+const formatShowMonth = (date) => {
+  const d = date?.toDate ? date.toDate() : new Date(date)
+  return d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
+}
+
+const formatShowDay = (date) => {
+  const d = date?.toDate ? date.toDate() : new Date(date)
+  return d.getDate()
+}
+
+const formatShowTime = (date) => {
+  const d = date?.toDate ? date.toDate() : new Date(date)
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
+const formatShowFullDate = (date) => {
+  const d = date?.toDate ? date.toDate() : new Date(date)
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+}
+
 // Audio player visibility toggle
 const toggleMedleyVisibility = async () => {
   try {
@@ -1664,6 +1946,134 @@ onMounted(async () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Live Shows Section -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title">
+              <font-awesome-icon :icon="['fas', 'calendar-days']" class="section-icon" />
+              Live Shows
+            </h2>
+            <button @click="addShow" class="btn btn-primary">
+              <font-awesome-icon :icon="['fas', 'plus']" />
+              Add Show
+            </button>
+          </div>
+
+          <!-- Upcoming Shows -->
+          <div v-if="upcomingShows.length > 0" class="shows-subsection mb-xl">
+            <h3 class="subsection-title mb-lg">
+              <font-awesome-icon :icon="['fas', 'clock']" />
+              Upcoming
+            </h3>
+            <div class="shows-grid">
+              <div
+                v-for="show in upcomingShows"
+                :key="show.id"
+                class="show-card card"
+              >
+                <div class="show-image">
+                  <img
+                    v-if="show.flyerUrl"
+                    :src="show.flyerUrl"
+                    :alt="show.title"
+                    class="show-flyer"
+                  />
+                  <div v-else class="show-flyer-placeholder flex flex-center">
+                    <font-awesome-icon :icon="['fas', 'calendar-days']" />
+                  </div>
+                  <div class="show-date-badge">
+                    <span class="show-month">{{ formatShowMonth(show.eventDate) }}</span>
+                    <span class="show-day">{{ formatShowDay(show.eventDate) }}</span>
+                  </div>
+                </div>
+
+                <div class="show-details p-md">
+                  <h4 class="show-title m-0 mb-xs">{{ show.title }}</h4>
+                  <p class="show-venue text-secondary m-0 mb-xs">
+                    <font-awesome-icon :icon="['fas', 'location-dot']" />
+                    {{ show.venue }}
+                  </p>
+                  <p class="show-location text-muted m-0 mb-sm font-sm">
+                    {{ show.location }}
+                  </p>
+                  <p class="show-time text-primary font-sm m-0">
+                    <font-awesome-icon :icon="['fas', 'clock']" />
+                    {{ formatShowTime(show.eventDate) }}
+                  </p>
+                  <a
+                    v-if="show.ticketUrl"
+                    :href="show.ticketUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="ticket-link font-sm mt-sm"
+                    @click.stop
+                  >
+                    <font-awesome-icon :icon="['fas', 'ticket']" />
+                    Get Tickets
+                  </a>
+                </div>
+
+                <div class="show-actions">
+                  <button
+                    @click="editShow(show)"
+                    class="btn-icon show-action-btn"
+                    title="Edit show"
+                  >
+                    <font-awesome-icon :icon="['fas', 'edit']" />
+                  </button>
+                  <button
+                    @click="deleteShow(show)"
+                    class="btn-icon show-action-btn btn-danger"
+                    title="Delete show"
+                  >
+                    <font-awesome-icon :icon="['fas', 'trash']" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Past Shows (Collapsible) -->
+          <div v-if="pastShows.length > 0" class="shows-subsection">
+            <details class="past-shows-accordion">
+              <summary class="subsection-title">
+                <font-awesome-icon :icon="['fas', 'history']" />
+                Past Shows ({{ pastShows.length }})
+              </summary>
+              <div class="shows-grid shows-grid-compact mt-lg">
+                <div
+                  v-for="show in pastShows"
+                  :key="show.id"
+                  class="show-card show-card-past card"
+                >
+                  <div class="show-details-compact p-md flex flex-between">
+                    <div>
+                      <h4 class="show-title m-0 mb-xs">{{ show.title }}</h4>
+                      <p class="text-muted font-sm m-0">
+                        {{ formatShowFullDate(show.eventDate) }} · {{ show.venue }}
+                      </p>
+                    </div>
+                    <button
+                      @click="deleteShow(show)"
+                      class="btn-icon show-action-btn btn-danger"
+                      title="Delete show"
+                    >
+                      <font-awesome-icon :icon="['fas', 'trash']" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <!-- Empty State -->
+          <div v-if="shows.length === 0" class="empty-state text-center p-xl">
+            <font-awesome-icon :icon="['fas', 'calendar-plus']" class="empty-icon text-muted mb-md" />
+            <p class="text-secondary m-0">No live shows scheduled yet.</p>
+            <p class="text-muted font-sm">Add your upcoming shows to let fans know where to see you live!</p>
           </div>
         </div>
 
@@ -2184,6 +2594,136 @@ onMounted(async () => {
                 {{ savingColors ? 'Saving...' : 'Save Colors' }}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Show Modal -->
+      <div v-if="showShowModal" class="modal-overlay" @click="closeShowModal">
+        <div class="modal modal-lg" @click.stop>
+          <div class="modal-header">
+            <h3>
+              <font-awesome-icon :icon="editingShow ? ['fas', 'edit'] : ['fas', 'plus']" />
+              {{ editingShow ? 'Edit Show' : 'Add Show' }}
+            </h3>
+            <button @click="closeShowModal" class="close-btn">×</button>
+          </div>
+
+          <div class="modal-content">
+            <form @submit.prevent="saveShow">
+              <!-- Event Title -->
+              <div class="form-group">
+                <label class="form-label">Event Title *</label>
+                <input
+                  v-model="showForm.title"
+                  type="text"
+                  class="form-input"
+                  placeholder="Album Release Party, Summer Tour Stop, etc."
+                  required
+                />
+              </div>
+
+              <!-- Description -->
+              <div class="form-group">
+                <label class="form-label">Description (Optional)</label>
+                <textarea
+                  v-model="showForm.description"
+                  class="form-textarea"
+                  rows="3"
+                  placeholder="Tell fans what to expect at this show..."
+                ></textarea>
+              </div>
+
+              <!-- Date and Time -->
+              <div class="grid grid-2 gap-md">
+                <div class="form-group">
+                  <label class="form-label">Date *</label>
+                  <input
+                    v-model="showForm.eventDate"
+                    type="date"
+                    class="form-input"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Time *</label>
+                  <input
+                    v-model="showForm.eventTime"
+                    type="time"
+                    class="form-input"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- Venue -->
+              <div class="form-group">
+                <label class="form-label">Venue *</label>
+                <input
+                  v-model="showForm.venue"
+                  type="text"
+                  class="form-input"
+                  placeholder="The Blue Note"
+                  required
+                />
+              </div>
+
+              <!-- Location -->
+              <div class="form-group">
+                <label class="form-label">Location *</label>
+                <input
+                  v-model="showForm.location"
+                  type="text"
+                  class="form-input"
+                  placeholder="Brooklyn, NY"
+                  required
+                />
+                <p class="form-hint">City, State or City, Country</p>
+              </div>
+
+              <!-- Ticket URL -->
+              <div class="form-group">
+                <label class="form-label">Ticket URL (Optional)</label>
+                <input
+                  v-model="showForm.ticketUrl"
+                  type="url"
+                  class="form-input"
+                  placeholder="https://eventbrite.com/..."
+                />
+                <p class="form-hint">Link where fans can purchase tickets</p>
+              </div>
+
+              <!-- Flyer Image -->
+              <div class="form-group">
+                <label class="form-label">
+                  Flyer Image {{ editingShow ? '(Leave empty to keep current)' : '(Optional)' }}
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="handleFlyerFileSelect"
+                  class="form-input"
+                  ref="flyerFileInput"
+                />
+                <p class="form-hint">Maximum file size: 10MB</p>
+              </div>
+
+              <!-- Error Message -->
+              <div v-if="showModalError" class="form-error">
+                {{ showModalError }}
+              </div>
+
+              <!-- Form Actions -->
+              <div class="modal-footer">
+                <button type="button" @click="closeShowModal" class="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" :disabled="savingShow">
+                  <font-awesome-icon v-if="savingShow" :icon="['fas', 'spinner']" class="fa-spin" />
+                  {{ savingShow ? 'Saving...' : (editingShow ? 'Save Changes' : 'Add Show') }}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -3163,10 +3703,214 @@ onMounted(async () => {
   .color-option-group {
     grid-template-columns: 1fr;
   }
-  
+
   .color-preview {
     width: 100px;
     height: 50px;
+  }
+}
+
+/* Live Shows Section Styles */
+.shows-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.shows-grid-compact {
+  grid-template-columns: 1fr;
+}
+
+.subsection-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.show-card {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  transition: all var(--transition-normal);
+}
+
+.show-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.show-card-past {
+  background: var(--bg-secondary);
+  opacity: 0.8;
+}
+
+.show-image {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--bg-tertiary);
+}
+
+.show-flyer {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.show-flyer-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 3rem;
+}
+
+.show-date-badge {
+  position: absolute;
+  top: var(--spacing-sm);
+  left: var(--spacing-sm);
+  background: var(--color-primary);
+  color: white;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  text-align: center;
+  line-height: 1.2;
+  box-shadow: var(--shadow-md);
+}
+
+.show-month {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.show-day {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.show-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.show-venue {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.show-location {
+  color: var(--text-muted);
+}
+
+.show-time {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.ticket-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.ticket-link:hover {
+  text-decoration: underline;
+}
+
+.show-actions {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  display: flex;
+  gap: var(--spacing-xs);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.show-card:hover .show-actions {
+  opacity: 1;
+}
+
+.show-action-btn {
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+}
+
+.show-action-btn:hover {
+  background: var(--color-primary);
+}
+
+.show-action-btn.btn-danger:hover {
+  background: var(--color-danger);
+}
+
+.show-details-compact {
+  align-items: center;
+}
+
+.past-shows-accordion {
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.past-shows-accordion summary {
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.past-shows-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.past-shows-accordion summary::before {
+  content: '▶';
+  display: inline-block;
+  margin-right: var(--spacing-sm);
+  transition: transform var(--transition-normal);
+  font-size: 0.75rem;
+}
+
+.past-shows-accordion[open] summary::before {
+  transform: rotate(90deg);
+}
+
+/* Responsive Shows */
+@media (max-width: 768px) {
+  .shows-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .show-image {
+    aspect-ratio: 2 / 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .show-date-badge {
+    padding: var(--spacing-xs);
+  }
+
+  .show-day {
+    font-size: 1.25rem;
   }
 }
 </style>

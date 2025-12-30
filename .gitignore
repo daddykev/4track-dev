@@ -33,3 +33,6 @@ coverage
 .env
 .env.local
 .env.*.local
+
+# Dev files
+CLAUDE.md

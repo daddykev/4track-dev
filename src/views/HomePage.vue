@@ -223,7 +223,7 @@ onMounted(() => {
           
           <div class="footer-bottom">
             <p>&copy; 2025 4track. Released under MIT License.</p>
-            <p class="footer-note">Public Beta: September 2025</p>
+            <p class="footer-note">Public Beta: January 2026</p>
           </div>
         </div>
       </div>

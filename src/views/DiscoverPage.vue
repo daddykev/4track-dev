@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/firebase'
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore'
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
 import FeedPlayer from '@/components/FeedPlayer.vue'
 
 const router = useRouter()
@@ -21,6 +21,7 @@ const showPlayer = ref(false)
 // Feed data
 const allTracks = ref([])
 const allArtists = ref([])
+const allShows = ref([])
 const feedOrder = ref([])
 const displayedItems = ref([])
 const itemsPerPage = 24
@@ -111,7 +112,26 @@ const loadContent = async () => {
     
     // Shuffle artists for variety
     allArtists.value = shuffleArray(artists)
-    
+
+    // Load upcoming live shows
+    const now = new Date()
+    const showsQuery = query(
+      collection(db, 'liveShows'),
+      where('eventDate', '>=', now),
+      where('isPublic', '==', true),
+      orderBy('eventDate', 'asc'),
+      limit(20)
+    )
+
+    const showsSnapshot = await getDocs(showsQuery)
+    const shows = showsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      type: 'show'
+    }))
+
+    allShows.value = shuffleArray(shows)
+
     // Create feed order
     createFeedOrder()
     
@@ -155,29 +175,36 @@ const loadArtistPhoto = async (artist) => {
   }
 }
 
-// Create 2:1 track:artist pattern
+// Create 3:1:1 track:artist:show pattern
 const createFeedOrder = () => {
   const order = []
   let trackIndex = 0
   let artistIndex = 0
-  
-  // Create the pattern: 2 tracks, 1 artist, repeat
-  while (trackIndex < allTracks.value.length || artistIndex < allArtists.value.length) {
-    // Add 2 tracks if available
-    for (let i = 0; i < 2; i++) {
+  let showIndex = 0
+
+  // Create the pattern: 3 tracks, 1 artist, 1 show, repeat
+  while (trackIndex < allTracks.value.length || artistIndex < allArtists.value.length || showIndex < allShows.value.length) {
+    // Add 3 tracks if available
+    for (let i = 0; i < 3; i++) {
       if (trackIndex < allTracks.value.length) {
         order.push(allTracks.value[trackIndex])
         trackIndex++
       }
     }
-    
+
     // Add 1 artist if available
     if (artistIndex < allArtists.value.length) {
       order.push(allArtists.value[artistIndex])
       artistIndex++
     }
+
+    // Add 1 show if available
+    if (showIndex < allShows.value.length) {
+      order.push(allShows.value[showIndex])
+      showIndex++
+    }
   }
-  
+
   feedOrder.value = order
 }
 
@@ -234,10 +261,17 @@ const handleCardClick = (item) => {
     // Build queue of all tracks currently in feed
     trackQueue.value = displayedItems.value.filter(i => i.type === 'track')
     const index = trackQueue.value.findIndex(t => t.id === item.id)
-    
+
     selectedTrack.value = item
     currentTrackIndex.value = index >= 0 ? index : 0
     showPlayer.value = true
+  } else if (item.type === 'show') {
+    // Navigate to artist page or ticket URL
+    if (item.ticketUrl) {
+      window.open(item.ticketUrl, '_blank')
+    } else if (item.artistSlug) {
+      router.push(`/${item.artistSlug}`)
+    }
   }
 }
 
@@ -266,6 +300,29 @@ const formatDuration = (seconds) => {
   const minutes = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${minutes}:${secs.toString().padStart(2, '0')}`
+}
+
+// Date formatting helpers for shows
+const formatShowDate = (timestamp) => {
+  if (!timestamp) return ''
+  const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp)
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
+const formatShowMonth = (timestamp) => {
+  if (!timestamp) return ''
+  const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp)
+  return date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
+}
+
+const formatShowDay = (timestamp) => {
+  if (!timestamp) return ''
+  const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp)
+  return date.getDate()
 }
 </script>
 
@@ -343,9 +400,9 @@ const formatDuration = (seconds) => {
           <!-- Artist Card -->
           <div v-else-if="item.type === 'artist'" class="card feed-card artist-feed-card">
             <div class="card-image-container">
-              <img 
-                v-if="item.profileImageUrl || item.primaryPhotoThumbnail" 
-                :src="item.primaryPhotoThumbnail || item.profileImageUrl" 
+              <img
+                v-if="item.profileImageUrl || item.primaryPhotoThumbnail"
+                :src="item.primaryPhotoThumbnail || item.profileImageUrl"
                 :alt="item.name"
                 class="card-image artist-image"
                 loading="lazy"
@@ -353,14 +410,54 @@ const formatDuration = (seconds) => {
               <div v-else class="no-image">
                 <font-awesome-icon :icon="['fas', 'user-music']" />
               </div>
-              
+
               <div class="artist-badge">ARTIST</div>
             </div>
-            
+
             <div class="card-content">
               <h3 class="artist-name">{{ item.name }}</h3>
               <p class="artist-genre">{{ item.genre || 'Independent' }}</p>
               <p class="artist-track-count">{{ item.trackCount || 0 }} tracks</p>
+            </div>
+          </div>
+
+          <!-- Show Card -->
+          <div v-else-if="item.type === 'show'" class="card feed-card show-feed-card">
+            <div class="card-image-container">
+              <img
+                v-if="item.flyerUrl"
+                :src="item.flyerUrl"
+                :alt="item.title"
+                class="card-image"
+                loading="lazy"
+              />
+              <div v-else class="no-image show-placeholder">
+                <font-awesome-icon :icon="['fas', 'calendar-star']" />
+              </div>
+
+              <!-- Date Badge -->
+              <div class="show-date-badge">
+                <span class="date-month">{{ formatShowMonth(item.eventDate) }}</span>
+                <span class="date-day">{{ formatShowDay(item.eventDate) }}</span>
+              </div>
+
+              <div class="show-badge">LIVE SHOW</div>
+            </div>
+
+            <div class="card-content">
+              <h3 class="show-title">{{ item.title }}</h3>
+              <p class="show-artist">{{ item.artistName }}</p>
+              <p class="show-venue">
+                <font-awesome-icon :icon="['fas', 'location-dot']" />
+                {{ item.venue }}<span v-if="item.location">, {{ item.location }}</span>
+              </p>
+              <div class="show-meta">
+                <span class="show-date">{{ formatShowDate(item.eventDate) }}</span>
+                <span v-if="item.ticketUrl" class="ticket-link">
+                  <font-awesome-icon :icon="['fas', 'ticket']" />
+                  Tickets
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -622,6 +719,114 @@ const formatDuration = (seconds) => {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin: 0;
+}
+
+/* Show Card Styles */
+.show-feed-card {
+  border-color: var(--color-warning, #f59e0b);
+}
+
+.show-feed-card:hover {
+  border-color: var(--color-warning, #f59e0b);
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);
+}
+
+.show-placeholder {
+  background: linear-gradient(135deg, var(--color-warning, #f59e0b) 0%, #d97706 100%);
+  color: white;
+}
+
+.show-date-badge {
+  position: absolute;
+  top: var(--spacing-sm);
+  left: var(--spacing-sm);
+  background: white;
+  color: #111;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.date-month {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--color-warning, #f59e0b);
+}
+
+.date-day {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.show-badge {
+  position: absolute;
+  bottom: var(--spacing-sm);
+  left: var(--spacing-sm);
+  background: var(--color-warning, #f59e0b);
+  color: white;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+}
+
+.show-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.show-artist {
+  font-size: 0.9rem;
+  color: var(--color-warning, #f59e0b);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.show-venue {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.show-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--spacing-sm);
+  font-size: 0.85rem;
+}
+
+.show-date {
+  color: var(--text-muted);
+}
+
+.ticket-link {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-warning, #f59e0b);
+  font-weight: 600;
 }
 
 /* Loading States */
