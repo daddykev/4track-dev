@@ -5,7 +5,7 @@
 [![Firebase](https://img.shields.io/badge/Firebase-v9-FFA000.svg)](https://firebase.google.com/)
 [![PayPal](https://img.shields.io/badge/PayPal-Integration-00457C.svg)](https://developer.paypal.com/)
 
-> A free, open source music platform that enables independent artists to monetize their music directly with listeners through customizable audio players and direct PayPal integration.
+> A free, open source music platform with a chronological feed where artists keep 100% of revenue and fans always see what they follow. No algorithms. No throttling. No pay-to-play.
 
 ## ✨ Features
 
@@ -21,12 +21,35 @@
 - **Audio Player Visibility** - Toggle public/hidden status
 - **Basic Analytics** - Track plays, hearts, downloads, and revenue
 - **Live Shows** - Promote upcoming performances with flyer artwork and ticket links
+- **Post Once** - No algorithm to game; your followers see your content automatically
 - **Photo Gallery** - Upload high-resolution photos with automatic thumbnails
 - **Custom Color Themes** - Extract color palettes from photos/artwork
 
+### 📻 The Chronological Feed
+
+It's 2026, and a music-oriented chronological feed is somehow a novel idea.
+
+Artists know the algorithmic pain intimately: you can have thousands of followers and still reach only a tiny fraction of them because opaque algorithms decided you're no longer "interesting" this week, or you're not paying for "boosts." On 4track, the feed is agnostic.
+
+**How it works:**
+- **Always Chronological** - Content appears in the order it was posted
+- **No Shadow Throttling** - Every post reaches every follower
+- **No Engagement Roulette** - Your reach isn't tied to likes or comments
+- **No Artificial Scarcity** - Attention isn't rationed by an algorithm
+- **Looping Feed** - Once you've scrolled through everything, it cycles back
+
+**For Artists:**
+- Add a live show date and the feed automatically displays it until the day of the event
+- Release a track and everyone who follows you sees it
+- Post once and get back to making music
+
+The feed mixes tracks, artists, and upcoming shows in a 3:1:1 pattern, giving equal visibility to new releases and live performances while keeping the experience fresh and varied.
+
 ### 🎧 For Listeners
-- **Music Feed** - Discover music through an infinite-scroll feed
-- **Mixed Content** - See tracks and artist pages in a curated 2:1 pattern
+- **Chronological Feed** - See everything you follow, in order, every time
+- **No Algorithm** - Content appears based on when it was posted, not engagement metrics
+- **Mixed Content** - Tracks, artists, and live shows in a natural 3:1:1 pattern
+- **Infinite Loop** - Feed cycles back to the beginning once you've seen everything
 - **In-Feed Player** - Play tracks without leaving the feed
 - **Track Queue** - Continuous playback through the feed
 - **Music Collection** - Save and purchase tracks
@@ -35,7 +58,7 @@
 - **Heart Tracks** - Save favorites for later purchase
 - **See Collaborators** - View all artists featured on a track
 - **Audio Quality Display** - See format details (bit depth, sample rate, etc.)
-- **Discover Live Shows** - Find upcoming performances in the feed with date, venue, and ticket info
+- **Discover Live Shows** - Find upcoming performances with date, venue, and ticket info
 - **No Account Required** - Stream music without signing up
 
 ### 🏢 For Labels & Managers  
@@ -174,7 +197,7 @@ PAYPAL_CLIENT_SECRET=your_paypal_client_secret
 PAYPAL_MODE=sandbox  # or 'live' for production
 ```
 
-5. **Start development server**
+6. **Start development server**
 ```bash
 npm run dev
 ```
@@ -334,11 +357,12 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ### Version 0.1 (Current)
 - ✅ Artist audio players
 - ✅ Direct PayPal integration
+- ✅ Chronological discovery feed
 - ✅ Photo gallery with filters
 - ✅ Basic analytics
 - ✅ Email verification
 - ✅ Collaborator royalty splits
-- ✅ Live show promotion and discovery
+- ✅ Live show integration
 
 ### Version 0.2 (Public Launch - January 2026)
 - 🔄 API for third-party integrations
